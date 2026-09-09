@@ -1,0 +1,14 @@
+{
+  "name": "@rubiks-learning/cube-core",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit --pretty false"
+  },
+  "devDependencies": {
+    "vitest": "^4.0.0"
+  }
+}

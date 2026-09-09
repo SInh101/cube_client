@@ -1,0 +1,66 @@
+.move-sequence-control {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  background: #ffffff;
+}
+
+.move-sequence-control :is(h2, h3, p) {
+  margin: 0;
+}
+
+.move-sequence-control form {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.move-sequence-control textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  padding: 0.65rem;
+  border: 1px solid #94a3b8;
+  border-radius: 0.5rem;
+  font: inherit;
+}
+
+.move-sequence-control button {
+  padding: 0.55rem 0.8rem;
+  border: 0;
+  border-radius: 0.5rem;
+  color: #ffffff;
+  background: #334155;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.move-sequence-control button:disabled {
+  color: #64748b;
+  background: #e2e8f0;
+  cursor: not-allowed;
+}
+
+.move-sequence-control [role='alert'] {
+  color: #b91c1c;
+}
+
+.move-sequence-control__prepared {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.move-sequence-control__prepared ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style-position: inside;
+}
+
+.move-sequence-control__prepared li {
+  display: flex;
+}
