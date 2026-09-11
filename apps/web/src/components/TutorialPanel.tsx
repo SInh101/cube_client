@@ -117,6 +117,69 @@ export function TutorialPanel({
         )}
       </div>
 
+      <aside
+        className="tutorial-marker-guide"
+        aria-labelledby="marker-guide-title"
+      >
+        <div className="tutorial-marker-guide__intro">
+          <h2 id="marker-guide-title">How to read the quiz</h2>
+          <p>
+            In <code>FLD -&gt; URB</code>, move the <strong>F sticker</strong>{' '}
+            at FLD to the <strong>U face</strong> at URB. The first letter
+            identifies the sticker and all letters identify its position.
+          </p>
+        </div>
+        <dl className="tutorial-marker-guide__items">
+          <div>
+            <dt>
+              <MarkerBadge kind="tracked">●</MarkerBadge> Tracked
+            </dt>
+            <dd>The colored sticker you move to the Goal.</dd>
+          </div>
+          <div>
+            <dt>
+              <MarkerBadge kind="goal">G</MarkerBadge> Goal
+            </dt>
+            <dd>The destination face and position.</dd>
+          </div>
+          <div>
+            <dt>
+              <MarkerBadge kind="via">V</MarkerBadge> Via
+            </dt>
+            <dd>The tracked sticker must face here at least once.</dd>
+          </div>
+          <div>
+            <dt>
+              <MarkerBadge kind="fix">F</MarkerBadge> Fix
+            </dt>
+            <dd>This piece must not move. Forbidden turns are rejected.</dd>
+          </div>
+          <div>
+            <dt>
+              <MarkerBadge kind="restore">R</MarkerBadge> Restore
+            </dt>
+            <dd>
+              This translucent mark follows its sticker. Return it to its
+              starting position and orientation when you reach the Goal.
+            </dd>
+          </div>
+          <div>
+            <dt>
+              <span className="tutorial-status-key">
+                <b>X</b>
+                <b>O</b>
+              </span>{' '}
+              Status
+            </dt>
+            <dd>X is not solved yet; O means every condition is satisfied.</dd>
+          </div>
+        </dl>
+        <p className="tutorial-marker-guide__note">
+          Gray stickers are not being tracked. U, R, F, D, L and B are face
+          names; changing the View does not turn the cube or add a move.
+        </p>
+      </aside>
+
       <FaceControlPanel
         state={state}
         onMove={onMove}
@@ -137,5 +200,19 @@ export function TutorialPanel({
         </button>
       </div>
     </section>
+  );
+}
+
+function MarkerBadge({
+  kind,
+  children,
+}: {
+  readonly kind: 'tracked' | 'goal' | 'via' | 'fix' | 'restore';
+  readonly children: string;
+}) {
+  return (
+    <span className="tutorial-marker-badge" data-kind={kind} aria-hidden="true">
+      {children}
+    </span>
   );
 }

@@ -95,6 +95,123 @@
   background: #fffbeb;
 }
 
+.tutorial-marker-guide {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  background: #f8fafc;
+}
+
+.tutorial-marker-guide h2,
+.tutorial-marker-guide p,
+.tutorial-marker-guide dl,
+.tutorial-marker-guide dd {
+  margin: 0;
+}
+
+.tutorial-marker-guide__intro {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.tutorial-marker-guide__intro h2 {
+  color: #334155;
+  font-size: 1rem;
+}
+
+.tutorial-marker-guide__intro p,
+.tutorial-marker-guide__note,
+.tutorial-marker-guide__items dd {
+  color: #475569;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.tutorial-marker-guide__intro code {
+  padding: 0.08rem 0.3rem;
+  border-radius: 0.3rem;
+  color: #1e3a8a;
+  background: #dbeafe;
+  font-weight: 800;
+}
+
+.tutorial-marker-guide__items {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem 1rem;
+}
+
+.tutorial-marker-guide__items div {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  align-items: start;
+  gap: 0.5rem;
+}
+
+.tutorial-marker-guide__items dt {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #334155;
+  font-weight: 800;
+}
+
+.tutorial-marker-badge {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 1.55rem;
+  height: 1.55rem;
+  border: 0.12rem solid #111827;
+  border-radius: 999px;
+  color: #111827;
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+.tutorial-marker-badge[data-kind='tracked'] {
+  background: #facc15;
+}
+
+.tutorial-marker-badge[data-kind='goal'] {
+  background: #22c55e;
+}
+
+.tutorial-marker-badge[data-kind='via'] {
+  background: #38bdf8;
+}
+
+.tutorial-marker-badge[data-kind='fix'] {
+  background: #fb7185;
+}
+
+.tutorial-marker-badge[data-kind='restore'] {
+  background: rgb(192 132 252 / 52%);
+}
+
+.tutorial-status-key {
+  display: inline-flex;
+  gap: 0.2rem;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.tutorial-status-key b:first-child {
+  color: #b42318;
+}
+
+.tutorial-status-key b:last-child {
+  color: #08783e;
+}
+
+@media (max-width: 48rem) {
+  .tutorial-marker-guide__items {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .tutorial-history-controls {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
