@@ -22,6 +22,7 @@ import {
   PlaybackControls,
   PresetPanel,
   SliceControlPanel,
+  TutorialPanel,
   type CubeMove,
   type CycleDisplayMode,
   type FacePreview,
@@ -32,9 +33,18 @@ import {
   firstThreeCycle,
   type CycleSelection,
 } from './analysis/cycleVisualization';
+import { CubeCameraControl } from './components/CubeCameraControl';
+import type { CubeCameraView } from './components/CubeView';
 import './components/face-controls.css';
 import { ToolModeTabs, type ToolMode } from './components/ToolModeTabs';
 import { usePlayback } from './playback/usePlayback';
+import {
+  evaluateTutorialProgress,
+  moveViolatesFix,
+  stickerLocation,
+  trackedStickerMarker,
+  TUTORIAL_PROBLEMS,
+} from './tutorial/tutorialProblems';
 
 type LoadStatus = 'loading' | 'ready' | 'error';
 type KeyboardMove = 'R' | 'L' | 'U' | 'D' | 'F' | 'B' | 'M' | 'E' | 'S';
@@ -83,6 +93,20 @@ export function App() {
   const [isCycleAnalysisLoading, setIsCycleAnalysisLoading] = useState(false);
   const [cycleAnalysisError, setCycleAnalysisError] = useState<string>();
   const [toolMode, setToolMode] = useState<ToolMode>('practice');
+  const [cameraView, setCameraView] = useState<CubeCameraView>('UFR');
+  const [tutorialProblemIndex, setTutorialProblemIndex] = useState(0);
+  const [tutorialStartState, setTutorialStartState] = useState<
+    CubeStateResponseDto['state'] | null
+  >(null);
+  const [tutorialMoves, setTutorialMoves] = useState<readonly CubeMove[]>([]);
+  const [tutorialStates, setTutorialStates] = useState<
+    readonly CubeStateResponseDto['state'][]
+  >([]);
+  const [clearedTutorialIds, setClearedTutorialIds] = useState<
+    ReadonlySet<string>
+  >(() => new Set());
+  const [tutorialNotice, setTutorialNotice] = useState<string>();
+  const solvedStateRef = useRef<CubeStateResponseDto['state'] | null>(null);
   const batchedMoveStatesRef = useRef<
     { readonly move: CubeMove; readonly state: CubeStateResponseDto['state'] }[]
   >([]);
@@ -109,6 +133,7 @@ export function App() {
 
         setCubeId(createDto.cubeId);
         setCubeState(stateDto.state);
+        solvedStateRef.current = stateDto.state;
         setStatus('ready');
       } catch (error: unknown) {
         if (error instanceof DOMException && error.name === 'AbortError')
@@ -122,7 +147,7 @@ export function App() {
   }, []);
 
   const applyMove = useCallback(
-    async (move: CubeMove): Promise<void> => {
+    async (move: CubeMove): Promise<CubeStateResponseDto['state']> => {
       if (cubeId === null) throw new Error('Cube is not ready');
       if (isAnimating) throw new Error('Cube is animating');
       if (resetInFlightRef.current) throw new Error('Cube is resetting');
@@ -140,7 +165,7 @@ export function App() {
           setLastMove(move);
           setAnimationId((current) => current + 1);
           setIsAnimating(true);
-          return;
+          return prepared.state;
         }
         const response = await fetch(
           `${API_BASE_URL}/api/cubes/${cubeId}/moves`,
@@ -158,6 +183,7 @@ export function App() {
         setLastMove(move);
         setAnimationId((current) => current + 1);
         setIsAnimating(true);
+        return dto.state;
       } catch (error: unknown) {
         setMoveError(true);
         throw error;
@@ -255,7 +281,9 @@ export function App() {
   } = usePlayback({
     moves: preparedMoves,
     isAnimating,
-    applyMove,
+    applyMove: async (move) => {
+      await applyMove(move);
+    },
     prepareMoves: prepareMovesForPlayback,
     resetCube,
     sequenceRevision: preparedMovesRevision,
@@ -410,6 +438,139 @@ export function App() {
       (move, index) => move === playbackState.moves[index],
     );
 
+  const tutorialProblem =
+    TUTORIAL_PROBLEMS[tutorialProblemIndex] ?? TUTORIAL_PROBLEMS[0]!;
+  const tutorialProgress = useMemo(
+    () =>
+      tutorialStartState === null
+        ? {
+            goalSatisfied: false,
+            viaSatisfied: tutorialProblem.via === undefined,
+            restoreSatisfied: tutorialProblem.restore === undefined,
+            solved: false,
+          }
+        : evaluateTutorialProgress(
+            tutorialProblem,
+            tutorialStartState,
+            tutorialStates,
+          ),
+    [tutorialProblem, tutorialStartState, tutorialStates],
+  );
+
+  const startTutorialProblem = useCallback(
+    async (problemIndex: number): Promise<void> => {
+      if (isAnimating || resetInFlightRef.current) return;
+      setTutorialProblemIndex(problemIndex);
+      setTutorialMoves([]);
+      setTutorialStates([]);
+      setTutorialNotice(undefined);
+      await resetCube();
+      setTutorialStartState(solvedStateRef.current);
+    },
+    [isAnimating, resetCube],
+  );
+
+  const applyTutorialMove = useCallback(
+    async (move: CubeMove): Promise<void> => {
+      if (tutorialStartState === null || cubeState === null) return;
+      if (
+        moveViolatesFix(tutorialProblem, tutorialStartState, cubeState, move)
+      ) {
+        setFacePreview(null);
+        setTutorialNotice(
+          `Fix: ${tutorialProblem.fix} edgeを動かす手は使えません。`,
+        );
+        return;
+      }
+
+      setTutorialNotice(undefined);
+      try {
+        const nextState = await applyMove(move);
+        const nextStates = [...tutorialStates, nextState];
+        setTutorialMoves((current) => [...current, move]);
+        setTutorialStates(nextStates);
+        if (
+          evaluateTutorialProgress(
+            tutorialProblem,
+            tutorialStartState,
+            nextStates,
+          ).solved
+        ) {
+          setClearedTutorialIds(
+            (current) => new Set([...current, tutorialProblem.id]),
+          );
+        }
+      } catch {
+        // applyMoveが共通のエラー表示を更新する。
+      }
+    },
+    [applyMove, cubeState, tutorialProblem, tutorialStartState, tutorialStates],
+  );
+  const applyTutorialMoveRef = useRef(applyTutorialMove);
+  applyTutorialMoveRef.current = applyTutorialMove;
+
+  const previousTutorialMove = useCallback(async (): Promise<void> => {
+    const previousMove = tutorialMoves.at(-1);
+    if (previousMove === undefined) return;
+    setTutorialNotice(undefined);
+    try {
+      await applyMove(invertMove(previousMove));
+      setTutorialMoves((current) => current.slice(0, -1));
+      setTutorialStates((current) => current.slice(0, -1));
+    } catch {
+      // applyMoveが共通のエラー表示を更新する。
+    }
+  }, [applyMove, tutorialMoves]);
+
+  const tutorialMarker = useMemo(
+    () =>
+      tutorialStartState === null || cubeState === null
+        ? undefined
+        : trackedStickerMarker(
+            tutorialStartState,
+            cubeState,
+            tutorialProblem.start,
+          ),
+    [cubeState, tutorialProblem.start, tutorialStartState],
+  );
+  const tutorialPositionMarkers = useMemo(
+    () => [
+      {
+        ...stickerLocation(tutorialProblem.goal),
+        label: 'G',
+        color: '#22c55e',
+      },
+      ...(tutorialProblem.via === undefined
+        ? []
+        : [
+            {
+              ...stickerLocation(tutorialProblem.via),
+              label: 'V',
+              color: '#38bdf8',
+            },
+          ]),
+      ...(tutorialProblem.fix === undefined
+        ? []
+        : [
+            {
+              ...stickerLocation(tutorialProblem.fix),
+              label: 'F',
+              color: '#fb7185',
+            },
+          ]),
+      ...(tutorialProblem.restore === undefined
+        ? []
+        : [
+            {
+              ...stickerLocation(tutorialProblem.restore),
+              label: 'R',
+              color: '#c084fc',
+            },
+          ]),
+    ],
+    [tutorialProblem],
+  );
+
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent): void {
       if (isEditableTarget(event.target)) return;
@@ -418,13 +579,17 @@ export function App() {
       if (!isKeyboardMove(face)) return;
 
       const move: CubeMove = event.shiftKey ? `${face}'` : face;
+      if (toolMode === 'tutorial') {
+        void applyTutorialMoveRef.current(move);
+        return;
+      }
       clearTeachingLessons();
       void applyMoveRef.current(move).catch(() => undefined);
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [clearTeachingLessons]);
+  }, [clearTeachingLessons, toolMode]);
 
   const cubeAnimation = useMemo(
     () =>
@@ -504,31 +669,49 @@ export function App() {
       {status === 'ready' && cubeState !== null && (
         <>
           <div className="cube-workspace">
-            <CubeView
-              state={cubeState}
-              animation={cubeAnimation}
-              preview={facePreview}
-              onAnimationComplete={handleAnimationComplete}
-              highlightedCubieIds={
-                toolMode === 'analysis'
-                  ? (cycleVisualization?.cubieIds ?? changedCubieIds)
-                  : []
-              }
-              dimUnhighlighted={
-                toolMode === 'analysis' &&
-                (cycleVisualization !== undefined || commutator !== undefined)
-              }
-              cubieMarkers={
-                toolMode === 'analysis' && cycleDisplayMode === 'labels'
-                  ? cycleVisualization?.markers
-                  : undefined
-              }
-              stickerMarkers={
-                toolMode === 'analysis' && cycleDisplayMode === 'stickers'
-                  ? cycleStickerMarkers
-                  : undefined
-              }
-            />
+            <div className="cube-view-column">
+              <CubeView
+                state={cubeState}
+                cameraView={cameraView}
+                animation={cubeAnimation}
+                preview={facePreview}
+                onAnimationComplete={handleAnimationComplete}
+                highlightedCubieIds={
+                  toolMode === 'tutorial' && tutorialMarker !== undefined
+                    ? [tutorialMarker.cubieId]
+                    : toolMode === 'analysis'
+                      ? (cycleVisualization?.cubieIds ?? changedCubieIds)
+                      : []
+                }
+                dimUnhighlighted={
+                  toolMode === 'analysis' &&
+                  (cycleVisualization !== undefined || commutator !== undefined)
+                }
+                cubieMarkers={
+                  toolMode === 'analysis' && cycleDisplayMode === 'labels'
+                    ? cycleVisualization?.markers
+                    : undefined
+                }
+                stickerMarkers={
+                  toolMode === 'tutorial' && tutorialMarker !== undefined
+                    ? [{ ...tutorialMarker, label: '●', color: '#facc15' }]
+                    : toolMode === 'analysis' && cycleDisplayMode === 'stickers'
+                      ? cycleStickerMarkers
+                      : undefined
+                }
+                focusedSticker={
+                  toolMode === 'tutorial' ? tutorialMarker : undefined
+                }
+                positionMarkers={
+                  toolMode === 'tutorial' ? tutorialPositionMarkers : undefined
+                }
+              />
+              <CubeCameraControl
+                value={cameraView}
+                disabled={isAnimating}
+                onChange={setCameraView}
+              />
+            </div>
             <div className="cube-controls">
               <AnimationSpeedControl
                 value={animationDurationMs}
@@ -537,9 +720,13 @@ export function App() {
               <ToolModeTabs
                 value={toolMode}
                 onChange={(mode) => {
+                  if (mode === 'tutorial' && isAnimating) return;
                   pause();
                   setFacePreview(null);
                   setToolMode(mode);
+                  if (mode === 'tutorial') {
+                    void startTutorialProblem(tutorialProblemIndex);
+                  }
                 }}
               />
               {toolMode === 'practice' ? (
@@ -600,6 +787,33 @@ export function App() {
                     }
                     onReversePlay={(preset) =>
                       void preparePresetPlayback(preset, true)
+                    }
+                  />
+                </section>
+              ) : toolMode === 'tutorial' ? (
+                <section
+                  id="tool-panel-tutorial"
+                  className="tool-mode-panel"
+                  role="tabpanel"
+                  aria-labelledby="tool-mode-tutorial"
+                >
+                  <TutorialPanel
+                    problems={TUTORIAL_PROBLEMS}
+                    activeIndex={tutorialProblemIndex}
+                    clearedProblemIds={clearedTutorialIds}
+                    progress={tutorialProgress}
+                    moveCount={tutorialMoves.length}
+                    state={cubeState}
+                    disabled={
+                      isAnimating || isResetting || tutorialStartState === null
+                    }
+                    notice={tutorialNotice}
+                    onSelect={(index) => void startTutorialProblem(index)}
+                    onMove={(move) => void applyTutorialMove(move)}
+                    onPreviewChange={setFacePreview}
+                    onPrevious={() => void previousTutorialMove()}
+                    onReset={() =>
+                      void startTutorialProblem(tutorialProblemIndex)
                     }
                   />
                 </section>
@@ -752,6 +966,14 @@ function invertMoves(moves: readonly CubeMove[]): readonly CubeMove[] {
           ? (move[0] as CubeMove)
           : (`${move}'` as CubeMove),
     );
+}
+
+function invertMove(move: CubeMove): CubeMove {
+  return move.endsWith('2')
+    ? move
+    : move.endsWith("'")
+      ? (move[0] as CubeMove)
+      : (`${move}'` as CubeMove);
 }
 
 async function getCreatedCube(

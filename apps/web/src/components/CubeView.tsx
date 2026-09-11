@@ -10,12 +10,14 @@ import {
   type CubeFaceDirection,
   type CubeMove,
   type CubeViewState,
+  type CubiePosition,
 } from './cubeViewModel';
 import type { FacePreview } from './FaceControl';
 import './cube-view.css';
 
 export interface CubeViewProps {
   readonly state: CubeViewState;
+  readonly cameraView?: CubeCameraView;
   readonly animation?: {
     readonly id: number;
     readonly move: CubeMove;
@@ -27,7 +29,23 @@ export interface CubeViewProps {
   readonly dimUnhighlighted?: boolean;
   readonly cubieMarkers?: readonly CubeViewMarker[];
   readonly stickerMarkers?: readonly CubeViewStickerMarker[];
+  readonly positionMarkers?: readonly CubeViewPositionMarker[];
+  readonly focusedSticker?: {
+    readonly cubieId: string;
+    readonly face: CubeFaceDirection;
+  };
 }
+
+export type CubeCameraView = 'UFR' | 'UBL' | 'DFR' | 'DBL';
+
+const CAMERA_POSITIONS: Readonly<
+  Record<CubeCameraView, readonly [number, number, number]>
+> = {
+  UFR: [5.2, 4.2, 6.4],
+  UBL: [-5.2, 4.2, -6.4],
+  DFR: [5.2, -4.2, 6.4],
+  DBL: [-5.2, -4.2, -6.4],
+};
 
 export interface CubeViewMarker {
   readonly cubieId: string;
@@ -37,6 +55,13 @@ export interface CubeViewMarker {
 
 export interface CubeViewStickerMarker extends CubeViewMarker {
   readonly face: CubeFaceDirection;
+}
+
+export interface CubeViewPositionMarker {
+  readonly position: CubiePosition;
+  readonly face: CubeFaceDirection;
+  readonly label: string;
+  readonly color?: string;
 }
 
 const STICKER_COLORS = {
@@ -63,6 +88,7 @@ const FACE_NORMALS: Readonly<
 /** CubeStateを表示する、API通信や操作状態を持たないThree.js viewer。 */
 export function CubeView({
   state,
+  cameraView = 'UFR',
   animation,
   preview,
   onAnimationComplete,
@@ -70,6 +96,8 @@ export function CubeView({
   dimUnhighlighted = false,
   cubieMarkers,
   stickerMarkers,
+  positionMarkers,
+  focusedSticker,
 }: CubeViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const lastPlayedAnimationId = useRef<number | null>(null);
@@ -80,7 +108,7 @@ export function CubeView({
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
-    camera.position.set(5.2, 4.2, 6.4);
+    camera.position.set(...CAMERA_POSITIONS[cameraView]);
     camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -128,11 +156,18 @@ export function CubeView({
         dimUnhighlighted && hasHighlightSelection && !isHighlighted;
       const cubieMaterials = CUBE_FACE_DIRECTIONS.map((direction) => {
         const sticker = cubie.stickers[direction];
+        const shouldMuteSticker =
+          focusedSticker !== undefined &&
+          sticker !== undefined &&
+          (cubie.id !== focusedSticker.cubieId ||
+            direction !== focusedSticker.face);
         const material = new THREE.MeshStandardMaterial({
           color:
             sticker === undefined
               ? INTERNAL_FACE_COLOR
-              : STICKER_COLORS[sticker],
+              : shouldMuteSticker
+                ? 0x64748b
+                : STICKER_COLORS[sticker],
           roughness: 0.72,
           metalness: 0,
           emissive:
@@ -178,6 +213,19 @@ export function CubeView({
         disposableMaterials.push(markerSprite.material);
         disposableTextures.push(markerSprite.texture);
       }
+    }
+
+    for (const marker of positionMarkers ?? []) {
+      const markerSprite = createMarkerSprite(marker, 0.34);
+      const normal = FACE_NORMALS[marker.face];
+      markerSprite.sprite.position.set(
+        marker.position[0] + normal[0] * 0.54,
+        marker.position[1] + normal[1] * 0.54,
+        marker.position[2] + normal[2] * 0.54,
+      );
+      stationaryGroup.add(markerSprite.sprite);
+      disposableMaterials.push(markerSprite.material);
+      disposableTextures.push(markerSprite.texture);
     }
 
     if (previewAnimation !== undefined) {
@@ -273,6 +321,7 @@ export function CubeView({
     };
   }, [
     state,
+    cameraView,
     animation,
     preview,
     onAnimationComplete,
@@ -280,6 +329,8 @@ export function CubeView({
     dimUnhighlighted,
     cubieMarkers,
     stickerMarkers,
+    positionMarkers,
+    focusedSticker,
   ]);
 
   return <div ref={containerRef} className="cube-view" />;
@@ -294,7 +345,7 @@ function createGhostGeometry(axis: 'x' | 'y' | 'z'): THREE.BoxGeometry {
 }
 
 function createMarkerSprite(
-  marker: CubeViewMarker,
+  marker: Pick<CubeViewMarker, 'label' | 'color'>,
   scale = 0.5,
 ): {
   readonly sprite: THREE.Sprite;

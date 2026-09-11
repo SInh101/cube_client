@@ -1,0 +1,118 @@
+.tutorial-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.tutorial-problem-list {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tutorial-problem-list button {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.55rem;
+  text-align: left;
+  background: #ffffff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.tutorial-problem-list button[aria-current='true'] {
+  border-color: #2563eb;
+  color: #1e3a8a;
+  background: #eff6ff;
+  font-weight: 800;
+}
+
+.tutorial-problem-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.75rem 1rem;
+  padding: 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  background: #ffffff;
+}
+
+.tutorial-problem-card h2,
+.tutorial-problem-card p {
+  margin: 0;
+}
+
+.tutorial-problem-card__eyebrow {
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.tutorial-result {
+  grid-row: span 2;
+  align-self: start;
+  color: #b42318;
+  font-size: 4rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.tutorial-result[data-solved='true'] {
+  color: #08783e;
+}
+
+.tutorial-conditions {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  gap: 0.5rem 1rem;
+  margin: 0;
+}
+
+.tutorial-conditions div {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.tutorial-conditions dt {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.tutorial-conditions dd {
+  margin: 0;
+  font-weight: 800;
+}
+
+.tutorial-notice {
+  grid-column: 1 / -1;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.5rem;
+  color: #92400e;
+  background: #fffbeb;
+}
+
+.tutorial-history-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.tutorial-history-controls button {
+  padding: 0.65rem;
+  border: 1px solid #94a3b8;
+  border-radius: 0.55rem;
+  background: #ffffff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.tutorial-history-controls button:disabled,
+.tutorial-problem-list button:disabled {
+  color: #94a3b8;
+  cursor: not-allowed;
+}

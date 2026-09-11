@@ -1,6 +1,12 @@
 export { CubeView } from './CubeView';
 export type { CubeViewProps } from './CubeView';
-export type { CubeViewMarker, CubeViewStickerMarker } from './CubeView';
+export type {
+  CubeViewMarker,
+  CubeViewPositionMarker,
+  CubeViewStickerMarker,
+} from './CubeView';
+export type { CubeCameraView } from './CubeView';
+export { CubeCameraControl } from './CubeCameraControl';
 export { CycleTeachingPanel } from './CycleTeachingPanel';
 export type {
   CycleDisplayMode,
@@ -28,3 +34,5 @@ export type { CubeFaceDirection, CubeMove } from './cubeViewModel';
 export { findChangedCubieIds } from './cubeViewModel';
 export { CommutatorTeachingPanel } from './CommutatorTeachingPanel';
 export type { CommutatorTeachingPanelProps } from './CommutatorTeachingPanel';
+export { TutorialPanel } from './TutorialPanel';
+export type { TutorialPanelProps } from './TutorialPanel';

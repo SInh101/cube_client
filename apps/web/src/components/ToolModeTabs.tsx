@@ -1,6 +1,6 @@
 import './tool-mode-tabs.css';
 
-export type ToolMode = 'practice' | 'analysis';
+export type ToolMode = 'practice' | 'tutorial' | 'analysis';
 
 export interface ToolModeTabsProps {
   readonly value: ToolMode;
@@ -9,6 +9,7 @@ export interface ToolModeTabsProps {
 
 const MODES = [
   { value: 'practice', label: 'Practice' },
+  { value: 'tutorial', label: 'Tutorial' },
   { value: 'analysis', label: 'Analysis' },
 ] as const;
 
