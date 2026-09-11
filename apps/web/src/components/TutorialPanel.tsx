@@ -128,13 +128,18 @@ export function TutorialPanel({
             at FLD to the <strong>U face</strong> at URB. The first letter
             identifies the sticker and all letters identify its position.
           </p>
+          <p>
+            When <code>corner</code> or <code>edge</code> is shown, move the
+            whole colored piece to the destination; its orientation does not
+            matter.
+          </p>
         </div>
         <dl className="tutorial-marker-guide__items">
           <div>
             <dt>
               <MarkerBadge kind="tracked">●</MarkerBadge> Tracked
             </dt>
-            <dd>The colored sticker you move to the Goal.</dd>
+            <dd>The colored sticker or piece you move to the Goal.</dd>
           </div>
           <div>
             <dt>
@@ -159,8 +164,8 @@ export function TutorialPanel({
               <MarkerBadge kind="restore">R</MarkerBadge> Restore
             </dt>
             <dd>
-              This translucent mark follows its sticker. Return it to its
-              starting position and orientation when you reach the Goal.
+              The solid R is the correct location. The translucent R follows its
+              sticker; return both to the same place when you reach Goal.
             </dd>
           </div>
           <div>

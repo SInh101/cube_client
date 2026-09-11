@@ -89,7 +89,7 @@ Restoreは必ずSticker条件として表記し、`corner` または `edge` を�
 - Sticker問題では、対象ステッカーだけを色付きで表示し、その他のステッカーは灰色にする。
 - Goal対象とGoal位置のエフェクトは区別する。
 - `Via` の通過位置、`Fix` の対象、`Restore` の対象も、それぞれ識別できる表示にする。
-- Restore対象のステッカーは元の色を残し、半透明の `R` を対象ステッカーへ重ねて移動と向きに追従させる。開始位置へ固定したマーカーにはしない。
+- Restore対象のステッカーは元の色を残す。正解位置には不透明の `R` を表示し、Restore対象ステッカーには半透明の `R` を重ねて移動と向きに追従させる。
 - 灰色化したステッカーは、カメラから見て陰になるB・L・D面でも黒ではなく灰色と識別できる明るさを保つ。
 - カメラのどのプリセット視点でも確認できるよう、U・R・F・D・L・Bの全6面に面名を表示する。
 - Tutorialタブ内に、問題記法、色付き追跡ステッカー、`G`、`V`、`F`、`R`、`X`、`O`、灰色ステッカー、面名、視点変更の意味を初見の利用者向けに常時表示する。
@@ -98,20 +98,32 @@ Restoreは必ずSticker条件として表記し、`corner` または `edge` を�
 
 ## Initial Problems
 
-初期実装では次のSticker問題を、この順序で出題する。
+初期実装では次の問題を、この順序で出題する。最初の5問をPosition問題の導入、その後をSticker問題とする。
 
-1. `ULF -> URB`
-2. `FLD -> URB via ULF`
-3. `BDR -> URB`
-4. `FLD -> URB fix UB edge`
-5. `FLD -> URB restore UB fix RB edge`
+1. `ULF corner -> URB corner`
+2. `BDR corner -> URB corner`
+3. `FLD corner -> ULF corner`
+4. `FLD corner -> URB corner`
+5. `FLD corner -> URB corner fix UB edge`
+6. `ULF -> URB`
+7. `FLD -> URB via ULF`
+8. `BDR -> URB`
+9. `FLD -> URB fix UB edge`
+10. `FLD -> URB fix UB edge restore UR`
+11. `FLD -> URB restore UB fix RB edge`
 
 各問題の意味は次のとおり。
 
+- `ULF corner -> URB corner`: ULFコーナーパーツを、向きを問わずURBコーナー位置へ移す。
+- `BDR corner -> URB corner`: BDRコーナーパーツを、向きを問わずURBコーナー位置へ移す。
+- `FLD corner -> ULF corner`: FLDコーナーパーツを、向きを問わずULFコーナー位置へ移す。
+- `FLD corner -> URB corner`: FLDコーナーパーツを、向きを問わずURBコーナー位置へ移す。
+- `FLD corner -> URB corner fix UB edge`: UBエッジを一度も動かさず、FLDコーナーパーツを向きを問わずURBコーナー位置へ移す。
 - `ULF -> URB`: ULFのUステッカーをURB位置のU面へ移す。
 - `FLD -> URB via ULF`: FLDのFステッカーをURB位置のU面へ移し、その途中でULF位置のU面を一度以上通過させる。
 - `BDR -> URB`: BDRのBステッカーをURB位置のU面へ移す。
 - `FLD -> URB fix UB edge`: FLDのFステッカーをURB位置のU面へ移し、試行中はUBエッジを一度も動かさない。
+- `FLD -> URB fix UB edge restore UR`: FLDのFステッカーをURB位置のU面へ移し、試行中はUBエッジを一度も動かさず、Goal成立時には開始時のUR位置のUステッカーを元の位置・向きへ戻す。
 - `FLD -> URB restore UB fix RB edge`: FLDのFステッカーをURB位置のU面へ移し、試行中はRBエッジを一度も動かさず、Goal成立時には開始時のUB位置のUステッカーを元の位置・向きへ戻す。
 
 ## Camera

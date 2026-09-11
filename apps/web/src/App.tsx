@@ -41,7 +41,9 @@ import { usePlayback } from './playback/usePlayback';
 import {
   evaluateTutorialProgress,
   moveViolatesFix,
+  piecePosition,
   stickerLocation,
+  trackedPieceView,
   trackedStickerMarker,
   TUTORIAL_PROBLEMS,
 } from './tutorial/tutorialProblems';
@@ -522,16 +524,34 @@ export function App() {
     }
   }, [applyMove, tutorialMoves]);
 
-  const tutorialMarker = useMemo(
+  const tutorialPiece = useMemo(
     () =>
       tutorialStartState === null || cubeState === null
+        ? undefined
+        : trackedPieceView(
+            tutorialStartState,
+            cubeState,
+            tutorialProblem.start,
+          ),
+    [cubeState, tutorialProblem.start, tutorialStartState],
+  );
+  const tutorialMarker = useMemo(
+    () =>
+      tutorialStartState === null ||
+      cubeState === null ||
+      tutorialProblem.kind === 'position'
         ? undefined
         : trackedStickerMarker(
             tutorialStartState,
             cubeState,
             tutorialProblem.start,
           ),
-    [cubeState, tutorialProblem.start, tutorialStartState],
+    [
+      cubeState,
+      tutorialProblem.kind,
+      tutorialProblem.start,
+      tutorialStartState,
+    ],
   );
   const tutorialRestoreMarker = useMemo(
     () =>
@@ -549,7 +569,9 @@ export function App() {
   const tutorialPositionMarkers = useMemo(
     () => [
       {
-        ...stickerLocation(tutorialProblem.goal),
+        ...(tutorialProblem.kind === 'position'
+          ? { position: piecePosition(tutorialProblem.goal) }
+          : stickerLocation(tutorialProblem.goal)),
         label: 'G',
         color: '#22c55e',
       },
@@ -566,9 +588,18 @@ export function App() {
         ? []
         : [
             {
-              ...stickerLocation(tutorialProblem.fix),
+              position: piecePosition(tutorialProblem.fix),
               label: 'F',
               color: '#fb7185',
+            },
+          ]),
+      ...(tutorialProblem.restore === undefined
+        ? []
+        : [
+            {
+              ...stickerLocation(tutorialProblem.restore),
+              label: 'R',
+              color: '#c084fc',
             },
           ]),
     ],
@@ -681,8 +712,8 @@ export function App() {
                 preview={facePreview}
                 onAnimationComplete={handleAnimationComplete}
                 highlightedCubieIds={
-                  toolMode === 'tutorial' && tutorialMarker !== undefined
-                    ? [tutorialMarker.cubieId]
+                  toolMode === 'tutorial' && tutorialPiece !== undefined
+                    ? [tutorialPiece.cubieId]
                     : toolMode === 'analysis'
                       ? (cycleVisualization?.cubieIds ?? changedCubieIds)
                       : []
@@ -692,9 +723,19 @@ export function App() {
                   (cycleVisualization !== undefined || commutator !== undefined)
                 }
                 cubieMarkers={
-                  toolMode === 'analysis' && cycleDisplayMode === 'labels'
-                    ? cycleVisualization?.markers
-                    : undefined
+                  toolMode === 'tutorial' &&
+                  tutorialProblem.kind === 'position' &&
+                  tutorialPiece !== undefined
+                    ? [
+                        {
+                          cubieId: tutorialPiece.cubieId,
+                          label: '●',
+                          color: '#facc15',
+                        },
+                      ]
+                    : toolMode === 'analysis' && cycleDisplayMode === 'labels'
+                      ? cycleVisualization?.markers
+                      : undefined
                 }
                 stickerMarkers={
                   toolMode === 'tutorial' && tutorialMarker !== undefined
@@ -720,9 +761,16 @@ export function App() {
                       : undefined
                 }
                 focusedStickers={
-                  toolMode === 'tutorial' && tutorialMarker !== undefined
+                  toolMode === 'tutorial' && tutorialPiece !== undefined
                     ? [
-                        tutorialMarker,
+                        ...(tutorialProblem.kind === 'position'
+                          ? tutorialPiece.faces.map((face) => ({
+                              cubieId: tutorialPiece.cubieId,
+                              face,
+                            }))
+                          : tutorialMarker === undefined
+                            ? []
+                            : [tutorialMarker]),
                         ...(tutorialRestoreMarker === undefined
                           ? []
                           : [tutorialRestoreMarker]),

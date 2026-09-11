@@ -14,6 +14,7 @@ import {
 export interface TutorialProblem {
   readonly id: string;
   readonly title: string;
+  readonly kind: 'position' | 'sticker';
   readonly start: string;
   readonly goal: string;
   readonly via?: string;
@@ -34,25 +35,85 @@ interface TrackedSticker {
 }
 
 export const TUTORIAL_PROBLEMS: readonly TutorialProblem[] = [
-  { id: 'ulf-urb', title: 'ULF -> URB', start: 'ULF', goal: 'URB' },
+  {
+    id: 'ulf-corner-urb-corner',
+    title: 'ULF corner -> URB corner',
+    kind: 'position',
+    start: 'ULF corner',
+    goal: 'URB corner',
+  },
+  {
+    id: 'bdr-corner-urb-corner',
+    title: 'BDR corner -> URB corner',
+    kind: 'position',
+    start: 'BDR corner',
+    goal: 'URB corner',
+  },
+  {
+    id: 'fld-corner-ulf-corner',
+    title: 'FLD corner -> ULF corner',
+    kind: 'position',
+    start: 'FLD corner',
+    goal: 'ULF corner',
+  },
+  {
+    id: 'fld-corner-urb-corner',
+    title: 'FLD corner -> URB corner',
+    kind: 'position',
+    start: 'FLD corner',
+    goal: 'URB corner',
+  },
+  {
+    id: 'fld-corner-urb-corner-fix-ub',
+    title: 'FLD corner -> URB corner fix UB edge',
+    kind: 'position',
+    start: 'FLD corner',
+    goal: 'URB corner',
+    fix: 'UB',
+  },
+  {
+    id: 'ulf-urb',
+    title: 'ULF -> URB',
+    kind: 'sticker',
+    start: 'ULF',
+    goal: 'URB',
+  },
   {
     id: 'fld-urb-via-ulf',
     title: 'FLD -> URB via ULF',
+    kind: 'sticker',
     start: 'FLD',
     goal: 'URB',
     via: 'ULF',
   },
-  { id: 'bdr-urb', title: 'BDR -> URB', start: 'BDR', goal: 'URB' },
+  {
+    id: 'bdr-urb',
+    title: 'BDR -> URB',
+    kind: 'sticker',
+    start: 'BDR',
+    goal: 'URB',
+  },
   {
     id: 'fld-urb-fix-ub',
     title: 'FLD -> URB fix UB edge',
+    kind: 'sticker',
     start: 'FLD',
     goal: 'URB',
     fix: 'UB',
   },
   {
+    id: 'fld-urb-fix-ub-restore-ur',
+    title: 'FLD -> URB fix UB edge restore UR',
+    kind: 'sticker',
+    start: 'FLD',
+    goal: 'URB',
+    fix: 'UB',
+    restore: 'UR',
+  },
+  {
     id: 'fld-urb-restore-ub',
     title: 'FLD -> URB restore UB fix RB edge',
+    kind: 'sticker',
     start: 'FLD',
     goal: 'URB',
     restore: 'UB',
@@ -67,7 +128,10 @@ export function evaluateTutorialProgress(
 ): TutorialProgress {
   const currentState = statesAfterMoves.at(-1) ?? initialState;
   const tracked = trackedStickerAt(initialState, problem.start);
-  const goalSatisfied = stickerIsAt(currentState, tracked, problem.goal);
+  const goalSatisfied =
+    problem.kind === 'position'
+      ? cubieIsAt(currentState, tracked.cubieId, problem.goal)
+      : stickerIsAt(currentState, tracked, problem.goal);
   const viaSatisfied =
     problem.via === undefined ||
     statesAfterMoves.some((state) =>
@@ -120,6 +184,27 @@ export function trackedStickerMarker(
   return { cubieId: cubie.id, face };
 }
 
+export function trackedPieceView(
+  initialState: CubeViewState,
+  currentState: CubeViewState,
+  notation: string,
+): {
+  readonly cubieId: string;
+  readonly faces: readonly CubeFaceDirection[];
+} {
+  const tracked = trackedStickerAt(initialState, notation);
+  const cubie = createCubieViewModels(currentState).find(
+    ({ id }) => id === tracked.cubieId,
+  );
+  if (cubie === undefined) throw new Error('Tracked cubie was not found');
+  return {
+    cubieId: cubie.id,
+    faces: CUBE_FACE_DIRECTIONS.filter(
+      (face) => cubie.stickers[face] !== undefined,
+    ),
+  };
+}
+
 export function stickerLocation(notation: string): {
   readonly position: CubiePosition;
   readonly face: CubeFaceDirection;
@@ -129,6 +214,10 @@ export function stickerLocation(notation: string): {
     position: notationPosition(normalized),
     face: normalized[0] as CubeFaceDirection,
   };
+}
+
+export function piecePosition(notation: string): CubiePosition {
+  return notationPosition(notation.split(' ')[0] ?? notation);
 }
 
 function trackedStickerAt(
@@ -164,6 +253,18 @@ function stickerIsAt(
     samePosition(cubie.position, targetPosition) &&
     cubie.stickers[targetFace] === tracked.color
   );
+}
+
+function cubieIsAt(
+  state: CubeViewState,
+  cubieId: string,
+  targetNotation: string,
+): boolean {
+  const targetPosition = notationPosition(
+    targetNotation.split(' ')[0] ?? targetNotation,
+  );
+  const cubie = createCubieViewModels(state).find(({ id }) => id === cubieId);
+  return cubie !== undefined && samePosition(cubie.position, targetPosition);
 }
 
 function notationPosition(notation: string): CubiePosition {

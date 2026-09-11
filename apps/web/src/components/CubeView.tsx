@@ -60,7 +60,7 @@ export interface CubeViewStickerMarker extends CubeViewMarker {
 
 export interface CubeViewPositionMarker {
   readonly position: CubiePosition;
-  readonly face: CubeFaceDirection;
+  readonly face?: CubeFaceDirection;
   readonly label: string;
   readonly color?: string;
   readonly opacity?: number;
@@ -229,7 +229,8 @@ export function CubeView({
 
     for (const marker of positionMarkers ?? []) {
       const markerSprite = createMarkerSprite(marker, 0.34);
-      const normal = FACE_NORMALS[marker.face];
+      const normal =
+        marker.face === undefined ? [0, 0, 0] : FACE_NORMALS[marker.face];
       markerSprite.sprite.position.set(
         marker.position[0] + normal[0] * 0.54,
         marker.position[1] + normal[1] * 0.54,
