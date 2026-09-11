@@ -533,6 +533,19 @@ export function App() {
           ),
     [cubeState, tutorialProblem.start, tutorialStartState],
   );
+  const tutorialRestoreMarker = useMemo(
+    () =>
+      tutorialStartState === null ||
+      cubeState === null ||
+      tutorialProblem.restore === undefined
+        ? undefined
+        : trackedStickerMarker(
+            tutorialStartState,
+            cubeState,
+            tutorialProblem.restore,
+          ),
+    [cubeState, tutorialProblem.restore, tutorialStartState],
+  );
   const tutorialPositionMarkers = useMemo(
     () => [
       {
@@ -556,15 +569,6 @@ export function App() {
               ...stickerLocation(tutorialProblem.fix),
               label: 'F',
               color: '#fb7185',
-            },
-          ]),
-      ...(tutorialProblem.restore === undefined
-        ? []
-        : [
-            {
-              ...stickerLocation(tutorialProblem.restore),
-              label: 'R',
-              color: '#c084fc',
             },
           ]),
     ],
@@ -694,13 +698,36 @@ export function App() {
                 }
                 stickerMarkers={
                   toolMode === 'tutorial' && tutorialMarker !== undefined
-                    ? [{ ...tutorialMarker, label: '●', color: '#facc15' }]
+                    ? [
+                        {
+                          ...tutorialMarker,
+                          label: '●',
+                          color: '#facc15',
+                        },
+                        ...(tutorialRestoreMarker === undefined
+                          ? []
+                          : [
+                              {
+                                ...tutorialRestoreMarker,
+                                label: 'R',
+                                color: '#c084fc',
+                                opacity: 0.52,
+                              },
+                            ]),
+                      ]
                     : toolMode === 'analysis' && cycleDisplayMode === 'stickers'
                       ? cycleStickerMarkers
                       : undefined
                 }
-                focusedSticker={
-                  toolMode === 'tutorial' ? tutorialMarker : undefined
+                focusedStickers={
+                  toolMode === 'tutorial' && tutorialMarker !== undefined
+                    ? [
+                        tutorialMarker,
+                        ...(tutorialRestoreMarker === undefined
+                          ? []
+                          : [tutorialRestoreMarker]),
+                      ]
+                    : undefined
                 }
                 positionMarkers={
                   toolMode === 'tutorial' ? tutorialPositionMarkers : undefined

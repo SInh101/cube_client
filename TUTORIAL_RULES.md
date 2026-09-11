@@ -89,6 +89,9 @@ Restoreは必ずSticker条件として表記し、`corner` または `edge` を�
 - Sticker問題では、対象ステッカーだけを色付きで表示し、その他のステッカーは灰色にする。
 - Goal対象とGoal位置のエフェクトは区別する。
 - `Via` の通過位置、`Fix` の対象、`Restore` の対象も、それぞれ識別できる表示にする。
+- Restore対象のステッカーは元の色を残し、半透明の `R` を対象ステッカーへ重ねて移動と向きに追従させる。開始位置へ固定したマーカーにはしない。
+- 灰色化したステッカーは、カメラから見て陰になるB・L・D面でも黒ではなく灰色と識別できる明るさを保つ。
+- カメラのどのプリセット視点でも確認できるよう、U・R・F・D・L・Bの全6面に面名を表示する。
 - 未達状態は大きな `X`、達成状態は大きな `O` で表示する。
 - 音声通知は初期実装の対象外とする。
 
@@ -97,18 +100,18 @@ Restoreは必ずSticker条件として表記し、`corner` または `edge` を�
 初期実装では次のSticker問題を、この順序で出題する。
 
 1. `ULF -> URB`
-2. `BDR -> URB`
-3. `FLD -> URB via ULF`
+2. `FLD -> URB via ULF`
+3. `BDR -> URB`
 4. `FLD -> URB fix UB edge`
-5. `FLD -> URB restore UB`
+5. `FLD -> URB restore UB fix RB edge`
 
 各問題の意味は次のとおり。
 
 - `ULF -> URB`: ULFのUステッカーをURB位置のU面へ移す。
-- `BDR -> URB`: BDRのBステッカーをURB位置のU面へ移す。
 - `FLD -> URB via ULF`: FLDのFステッカーをURB位置のU面へ移し、その途中でULF位置のU面を一度以上通過させる。
+- `BDR -> URB`: BDRのBステッカーをURB位置のU面へ移す。
 - `FLD -> URB fix UB edge`: FLDのFステッカーをURB位置のU面へ移し、試行中はUBエッジを一度も動かさない。
-- `FLD -> URB restore UB`: FLDのFステッカーをURB位置のU面へ移し、Goal成立時には開始時のUB位置のUステッカーを元の位置・向きへ戻す。
+- `FLD -> URB restore UB fix RB edge`: FLDのFステッカーをURB位置のU面へ移し、試行中はRBエッジを一度も動かさず、Goal成立時には開始時のUB位置のUステッカーを元の位置・向きへ戻す。
 
 ## Camera
 

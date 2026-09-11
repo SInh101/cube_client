@@ -30,7 +30,7 @@ describe('tutorial problem rules', () => {
 
   it('BDRのBステッカーをURBのU面へ向ける条件を判定する', () => {
     const progress = evaluateTutorialProgress(
-      TUTORIAL_PROBLEMS[1]!,
+      TUTORIAL_PROBLEMS[2]!,
       solvedState(),
       statesAfter("R'"),
     );
@@ -39,7 +39,7 @@ describe('tutorial problem rules', () => {
 
   it('Viaは追跡ステッカーの位置と向きを判定する', () => {
     const progress = evaluateTutorialProgress(
-      TUTORIAL_PROBLEMS[2]!,
+      TUTORIAL_PROBLEMS[1]!,
       solvedState(),
       statesAfter("L'", 'U2'),
     );
@@ -49,7 +49,7 @@ describe('tutorial problem rules', () => {
 
   it('Previous相当でVia通過stateが消えると未成立へ戻る', () => {
     const progress = evaluateTutorialProgress(
-      TUTORIAL_PROBLEMS[2]!,
+      TUTORIAL_PROBLEMS[1]!,
       solvedState(),
       [],
     );
@@ -75,5 +75,15 @@ describe('tutorial problem rules', () => {
     expect(progress.goalSatisfied).toBe(true);
     expect(progress.restoreSatisfied).toBe(false);
     expect(progress.solved).toBe(false);
+  });
+
+  it('Restore問題ではRB edgeをFixする', () => {
+    const problem = TUTORIAL_PROBLEMS[4]!;
+    const initial = solvedState();
+    expect(problem.fix).toBe('RB');
+    expect(moveViolatesFix(problem, initial, initial, 'R')).toBe(true);
+    expect(moveViolatesFix(problem, initial, initial, "B'")).toBe(true);
+    expect(moveViolatesFix(problem, initial, initial, 'E2')).toBe(true);
+    expect(moveViolatesFix(problem, initial, initial, 'U')).toBe(false);
   });
 });

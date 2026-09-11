@@ -35,7 +35,6 @@ interface TrackedSticker {
 
 export const TUTORIAL_PROBLEMS: readonly TutorialProblem[] = [
   { id: 'ulf-urb', title: 'ULF -> URB', start: 'ULF', goal: 'URB' },
-  { id: 'bdr-urb', title: 'BDR -> URB', start: 'BDR', goal: 'URB' },
   {
     id: 'fld-urb-via-ulf',
     title: 'FLD -> URB via ULF',
@@ -43,6 +42,7 @@ export const TUTORIAL_PROBLEMS: readonly TutorialProblem[] = [
     goal: 'URB',
     via: 'ULF',
   },
+  { id: 'bdr-urb', title: 'BDR -> URB', start: 'BDR', goal: 'URB' },
   {
     id: 'fld-urb-fix-ub',
     title: 'FLD -> URB fix UB edge',
@@ -52,10 +52,11 @@ export const TUTORIAL_PROBLEMS: readonly TutorialProblem[] = [
   },
   {
     id: 'fld-urb-restore-ub',
-    title: 'FLD -> URB restore UB',
+    title: 'FLD -> URB restore UB fix RB edge',
     start: 'FLD',
     goal: 'URB',
     restore: 'UB',
+    fix: 'RB',
   },
 ] as const;
 

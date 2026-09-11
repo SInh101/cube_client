@@ -30,10 +30,10 @@ export interface CubeViewProps {
   readonly cubieMarkers?: readonly CubeViewMarker[];
   readonly stickerMarkers?: readonly CubeViewStickerMarker[];
   readonly positionMarkers?: readonly CubeViewPositionMarker[];
-  readonly focusedSticker?: {
+  readonly focusedStickers?: readonly {
     readonly cubieId: string;
     readonly face: CubeFaceDirection;
-  };
+  }[];
 }
 
 export type CubeCameraView = 'UFR' | 'UBL' | 'DFR' | 'DBL';
@@ -51,6 +51,7 @@ export interface CubeViewMarker {
   readonly cubieId: string;
   readonly label: string;
   readonly color?: string;
+  readonly opacity?: number;
 }
 
 export interface CubeViewStickerMarker extends CubeViewMarker {
@@ -62,6 +63,7 @@ export interface CubeViewPositionMarker {
   readonly face: CubeFaceDirection;
   readonly label: string;
   readonly color?: string;
+  readonly opacity?: number;
 }
 
 const STICKER_COLORS = {
@@ -97,7 +99,7 @@ export function CubeView({
   cubieMarkers,
   stickerMarkers,
   positionMarkers,
-  focusedSticker,
+  focusedStickers,
 }: CubeViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const lastPlayedAnimationId = useRef<number | null>(null);
@@ -157,10 +159,17 @@ export function CubeView({
       const cubieMaterials = CUBE_FACE_DIRECTIONS.map((direction) => {
         const sticker = cubie.stickers[direction];
         const shouldMuteSticker =
-          focusedSticker !== undefined &&
+          focusedStickers !== undefined &&
+          focusedStickers.length > 0 &&
           sticker !== undefined &&
-          (cubie.id !== focusedSticker.cubieId ||
-            direction !== focusedSticker.face);
+          !focusedStickers.some(
+            (focused) =>
+              cubie.id === focused.cubieId && direction === focused.face,
+          );
+        const isEmphasized =
+          isHighlighted ||
+          (previewAnimation !== undefined &&
+            isCubieInMoveLayer(cubie.position, previewAnimation));
         const material = new THREE.MeshStandardMaterial({
           color:
             sticker === undefined
@@ -170,13 +179,16 @@ export function CubeView({
                 : STICKER_COLORS[sticker],
           roughness: 0.72,
           metalness: 0,
-          emissive:
-            isHighlighted ||
-            (previewAnimation !== undefined &&
-              isCubieInMoveLayer(cubie.position, previewAnimation))
+          emissive: shouldMuteSticker
+            ? 0x64748b
+            : isEmphasized
               ? 0xffffff
               : 0x000000,
-          emissiveIntensity: isHighlighted ? 0.32 : 0.18,
+          emissiveIntensity: shouldMuteSticker
+            ? 0.5
+            : isHighlighted
+              ? 0.32
+              : 0.18,
           transparent: shouldDim,
           opacity: shouldDim ? 0.18 : 1,
           depthWrite: !shouldDim,
@@ -330,7 +342,7 @@ export function CubeView({
     cubieMarkers,
     stickerMarkers,
     positionMarkers,
-    focusedSticker,
+    focusedStickers,
   ]);
 
   return <div ref={containerRef} className="cube-view" />;
@@ -345,7 +357,7 @@ function createGhostGeometry(axis: 'x' | 'y' | 'z'): THREE.BoxGeometry {
 }
 
 function createMarkerSprite(
-  marker: Pick<CubeViewMarker, 'label' | 'color'>,
+  marker: Pick<CubeViewMarker, 'label' | 'color' | 'opacity'>,
   scale = 0.5,
 ): {
   readonly sprite: THREE.Sprite;
@@ -375,6 +387,7 @@ function createMarkerSprite(
   const material = new THREE.SpriteMaterial({
     map: texture,
     transparent: true,
+    opacity: marker.opacity ?? 1,
     depthTest: false,
     depthWrite: false,
   });
@@ -396,8 +409,11 @@ function createCenterLabels(): {
   const textures: THREE.CanvasTexture[] = [];
   const labels = [
     { text: 'U', position: [0, 1.476, 0], rotation: [-Math.PI / 2, 0, 0] },
+    { text: 'D', position: [0, -1.476, 0], rotation: [Math.PI / 2, 0, 0] },
     { text: 'F', position: [0, 0, 1.476], rotation: [0, 0, 0] },
+    { text: 'B', position: [0, 0, -1.476], rotation: [0, Math.PI, 0] },
     { text: 'R', position: [1.476, 0, 0], rotation: [0, Math.PI / 2, 0] },
+    { text: 'L', position: [-1.476, 0, 0], rotation: [0, -Math.PI / 2, 0] },
   ] as const;
 
   for (const label of labels) {
