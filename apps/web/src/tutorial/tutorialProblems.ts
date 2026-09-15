@@ -1,4 +1,5 @@
 import type { CubeColorDto } from '@rubiks-learning/api-contract';
+import { Cube } from '@rubiks-learning/cube-core';
 
 import {
   CUBE_FACE_DIRECTIONS,
@@ -20,6 +21,8 @@ export interface TutorialProblem {
   readonly via?: string;
   readonly fix?: string;
   readonly restore?: string;
+  /** 作問時とテスト時に正解可能性を保証する既知の手順。UIには表示しない。 */
+  readonly verificationMoves?: readonly CubeMove[];
 }
 
 export interface TutorialProblemGroup {
@@ -41,124 +44,52 @@ interface TrackedSticker {
   readonly color: CubeColorDto;
 }
 
-const CORNER_POSITION_PROBLEMS: readonly TutorialProblem[] = [
-  {
-    id: 'ulf-corner-urb-corner',
-    title: 'ULF corner -> URB corner',
-    kind: 'position',
-    start: 'ULF corner',
-    goal: 'URB corner',
-  },
-  {
-    id: 'bdr-corner-urb-corner',
-    title: 'BDR corner -> URB corner',
-    kind: 'position',
-    start: 'BDR corner',
-    goal: 'URB corner',
-  },
-  {
-    id: 'fld-corner-ulf-corner',
-    title: 'FLD corner -> ULF corner',
-    kind: 'position',
-    start: 'FLD corner',
-    goal: 'ULF corner',
-  },
-  {
-    id: 'fld-corner-urb-corner',
-    title: 'FLD corner -> URB corner',
-    kind: 'position',
-    start: 'FLD corner',
-    goal: 'URB corner',
-  },
-  {
-    id: 'fld-corner-urb-corner-fix-ub',
-    title: 'FLD corner -> URB corner fix UB edge',
-    kind: 'position',
-    start: 'FLD corner',
-    goal: 'URB corner',
-    fix: 'UB',
-  },
-] as const;
+type PieceKind = 'edge' | 'corner';
+type ProblemKind = TutorialProblem['kind'];
+type ProblemClass = 'simple' | 'via' | 'fix' | 'restore' | 'combined';
 
-const CORNER_STICKER_PROBLEMS: readonly TutorialProblem[] = [
-  {
-    id: 'ulf-urb',
-    title: 'ULF -> URB',
-    kind: 'sticker',
-    start: 'ULF',
-    goal: 'URB',
-  },
-  {
-    id: 'fld-urb-via-ulf',
-    title: 'FLD -> URB via ULF',
-    kind: 'sticker',
-    start: 'FLD',
-    goal: 'URB',
-    via: 'ULF',
-  },
-  {
-    id: 'bdr-urb',
-    title: 'BDR -> URB',
-    kind: 'sticker',
-    start: 'BDR',
-    goal: 'URB',
-  },
-  {
-    id: 'fld-urb-fix-ub',
-    title: 'FLD -> URB fix UB edge',
-    kind: 'sticker',
-    start: 'FLD',
-    goal: 'URB',
-    fix: 'UB',
-  },
-  {
-    id: 'fld-urb-fix-ub-restore-ur',
-    title: 'FLD -> URB fix UB edge restore UR',
-    kind: 'sticker',
-    start: 'FLD',
-    goal: 'URB',
-    fix: 'UB',
-    restore: 'UR',
-  },
-  {
-    id: 'fld-urb-restore-ub',
-    title: 'FLD -> URB restore UB fix RB edge',
-    kind: 'sticker',
-    start: 'FLD',
-    goal: 'URB',
-    restore: 'UB',
-    fix: 'RB',
-  },
-] as const;
+const PROBLEM_CLASS_COUNTS: Readonly<Record<ProblemClass, number>> = {
+  simple: 10,
+  via: 8,
+  fix: 8,
+  restore: 8,
+  combined: 10,
+};
+const CLASS_TITLES: Readonly<Record<ProblemClass, string>> = {
+  simple: '単純問題',
+  via: 'Via問題',
+  fix: 'Fix問題',
+  restore: 'Restore問題',
+  combined: '複合問題',
+};
+const OUTER_MOVES = [
+  'R',
+  "R'",
+  'R2',
+  'L',
+  "L'",
+  'L2',
+  'U',
+  "U'",
+  'U2',
+  'D',
+  "D'",
+  'D2',
+  'F',
+  "F'",
+  'F2',
+  'B',
+  "B'",
+  'B2',
+] as const satisfies readonly CubeMove[];
 
-/**
- * Tutorialの目次。今後はsingle-target配下へedgeを、同じ形式で
- * three-cycleを最上位へ追加できる。
- */
 export const TUTORIAL_PROBLEM_GROUPS: readonly TutorialProblemGroup[] = [
-  {
-    id: 'single-target',
-    title: 'Single target',
-    groups: [
-      {
-        id: 'corner',
-        title: 'Corner',
-        groups: [
-          {
-            id: 'corner-position',
-            title: 'Position',
-            problems: CORNER_POSITION_PROBLEMS,
-          },
-          {
-            id: 'corner-sticker',
-            title: 'Sticker',
-            problems: CORNER_STICKER_PROBLEMS,
-          },
-        ],
-      },
-    ],
-  },
-] as const;
+  createCategory('edge-position', 'エッジ位置', 'edge', 'position'),
+  createCategory('corner-position', 'コーナー位置', 'corner', 'position'),
+  createCategory('edge-sticker', 'エッジステッカー', 'edge', 'sticker'),
+  createCategory('corner-sticker', 'コーナーステッカー', 'corner', 'sticker'),
+  { id: 'three-cycle', title: '3点交換', problems: [] },
+];
 
 export const TUTORIAL_PROBLEMS: readonly TutorialProblem[] =
   flattenTutorialProblems(TUTORIAL_PROBLEM_GROUPS);
@@ -170,6 +101,306 @@ export function flattenTutorialProblems(
     ...(group.problems ?? []),
     ...flattenTutorialProblems(group.groups ?? []),
   ]);
+}
+
+export function verifyTutorialProblem(problem: TutorialProblem): boolean {
+  if (problem.verificationMoves === undefined) return false;
+  const cube = Cube.solved();
+  const initialState = cube.getState();
+  const states: CubeViewState[] = [];
+  for (const move of problem.verificationMoves) {
+    if (moveViolatesFix(problem, initialState, cube.getState(), move)) {
+      return false;
+    }
+    cube.applyMove(move);
+    states.push(cube.getState());
+  }
+  return evaluateTutorialProgress(problem, initialState, states).solved;
+}
+
+function createCategory(
+  id: string,
+  title: string,
+  pieceKind: PieceKind,
+  problemKind: ProblemKind,
+): TutorialProblemGroup {
+  const problems = createProblems(id, pieceKind, problemKind);
+  let offset = 0;
+  return {
+    id,
+    title,
+    groups: (Object.keys(PROBLEM_CLASS_COUNTS) as ProblemClass[]).map(
+      (problemClass) => {
+        const count = PROBLEM_CLASS_COUNTS[problemClass];
+        const group = {
+          id: `${id}-${problemClass}`,
+          title: CLASS_TITLES[problemClass],
+          problems: problems.slice(offset, offset + count),
+        };
+        offset += count;
+        return group;
+      },
+    ),
+  };
+}
+
+interface TrackedCandidate extends TrackedSticker {
+  readonly notation: string;
+  readonly position: CubiePosition;
+}
+
+function createProblems(
+  idPrefix: string,
+  pieceKind: PieceKind,
+  problemKind: ProblemKind,
+): readonly TutorialProblem[] {
+  const result: TutorialProblem[] = [];
+  for (const problemClass of Object.keys(
+    PROBLEM_CLASS_COUNTS,
+  ) as ProblemClass[]) {
+    const count = PROBLEM_CLASS_COUNTS[problemClass];
+    const candidates = candidateSequences(problemClass);
+    const used = new Set<string>();
+    for (const moves of candidates) {
+      const states = statesAfterMoves(moves);
+      for (const tracked of trackedCandidates(pieceKind, problemKind)) {
+        const problem = problemFromWitness(
+          `${idPrefix}-${problemClass}-${result.length + 1}`,
+          problemKind,
+          pieceKind,
+          problemClass,
+          tracked,
+          moves,
+          states,
+        );
+        if (problem === undefined) continue;
+        const signature = [
+          problem.start,
+          problem.goal,
+          problem.via,
+          problem.fix,
+          problem.restore,
+        ].join('|');
+        if (used.has(signature)) continue;
+        used.add(signature);
+        result.push(problem);
+        break;
+      }
+      if (used.size === count) break;
+    }
+    if (used.size !== count) {
+      throw new Error(
+        `Could not generate ${count} ${idPrefix} ${problemClass} problems`,
+      );
+    }
+  }
+  return result;
+}
+
+function problemFromWitness(
+  id: string,
+  problemKind: ProblemKind,
+  pieceKind: PieceKind,
+  problemClass: ProblemClass,
+  tracked: TrackedCandidate,
+  moves: readonly CubeMove[],
+  states: readonly CubeViewState[],
+): TutorialProblem | undefined {
+  const finalState = states.at(-1);
+  if (finalState === undefined) return undefined;
+  const suffix = problemKind === 'position' ? ` ${pieceKind}` : '';
+  const start = `${tracked.notation}${suffix}`;
+  const finalNotation = notationForTracked(finalState, tracked, problemKind);
+  if (finalNotation === undefined) return undefined;
+  const goal = `${finalNotation}${suffix}`;
+  if (goal === start) return undefined;
+
+  const needsVia = problemClass === 'via' || problemClass === 'combined';
+  const needsFix = problemClass === 'fix' || problemClass === 'combined';
+  const needsRestore =
+    problemClass === 'restore' || problemClass === 'combined';
+  const via = needsVia
+    ? findVia(states.slice(0, -1), tracked, problemKind, start, goal, suffix)
+    : undefined;
+  const fix = needsFix
+    ? findFixedPiece(moves, states, tracked.cubieId)
+    : undefined;
+  const restore = needsRestore
+    ? findRestoredSticker(states, tracked.cubieId, fix)
+    : undefined;
+  if (
+    (needsVia && via === undefined) ||
+    (needsFix && fix === undefined) ||
+    (needsRestore && restore === undefined)
+  ) {
+    return undefined;
+  }
+  const conditions = [
+    via === undefined ? '' : ` via ${via}`,
+    fix === undefined ? '' : ` fix ${fix}`,
+    restore === undefined ? '' : ` restore ${restore}`,
+  ].join('');
+  return {
+    id,
+    title: `${start} -> ${goal}${conditions}`,
+    kind: problemKind,
+    start,
+    goal,
+    ...(via === undefined ? {} : { via }),
+    ...(fix === undefined ? {} : { fix }),
+    ...(restore === undefined ? {} : { restore }),
+    verificationMoves: moves,
+  };
+}
+
+function candidateSequences(
+  problemClass: ProblemClass,
+): readonly (readonly CubeMove[])[] {
+  if (problemClass === 'simple') return OUTER_MOVES.map((move) => [move]);
+  const pairs = OUTER_MOVES.flatMap((first) =>
+    OUTER_MOVES.filter((second) => second[0] !== first[0]).map(
+      (second) => [first, second] as const,
+    ),
+  );
+  if (problemClass === 'via' || problemClass === 'fix') return pairs;
+  return pairs.flatMap(([first, second]) => [
+    [first, second, invertMove(first)],
+    [first, second, invertMove(first), invertMove(second)],
+  ]);
+}
+
+function statesAfterMoves(
+  moves: readonly CubeMove[],
+): readonly CubeViewState[] {
+  const cube = Cube.solved();
+  return moves.map((move) => {
+    cube.applyMove(move);
+    return cube.getState();
+  });
+}
+
+function trackedCandidates(
+  pieceKind: PieceKind,
+  problemKind: ProblemKind,
+): readonly TrackedCandidate[] {
+  const cubies = createCubieViewModels(Cube.solved().getState()).filter(
+    ({ stickers }) =>
+      CUBE_FACE_DIRECTIONS.filter((face) => stickers[face] !== undefined)
+        .length === (pieceKind === 'corner' ? 3 : 2),
+  );
+  return cubies.flatMap((cubie) => {
+    const faces = positionFaces(cubie.position);
+    const trackedFaces = problemKind === 'position' ? faces.slice(0, 1) : faces;
+    return trackedFaces.map((face) => ({
+      cubieId: cubie.id,
+      color: cubie.stickers[face]!,
+      notation: stickerNotation(cubie.position, face),
+      position: cubie.position,
+    }));
+  });
+}
+
+function notationForTracked(
+  state: CubeViewState,
+  tracked: TrackedSticker,
+  problemKind: ProblemKind,
+): string | undefined {
+  const cubie = createCubieViewModels(state).find(
+    ({ id }) => id === tracked.cubieId,
+  );
+  if (cubie === undefined) return undefined;
+  if (problemKind === 'position') return positionFaces(cubie.position).join('');
+  const face = CUBE_FACE_DIRECTIONS.find(
+    (candidate) => cubie.stickers[candidate] === tracked.color,
+  );
+  return face === undefined ? undefined : stickerNotation(cubie.position, face);
+}
+
+function findVia(
+  states: readonly CubeViewState[],
+  tracked: TrackedSticker,
+  problemKind: ProblemKind,
+  start: string,
+  goal: string,
+  suffix: string,
+): string | undefined {
+  return states
+    .map((state) => notationForTracked(state, tracked, problemKind))
+    .filter((value): value is string => value !== undefined)
+    .map((value) => `${value}${suffix}`)
+    .find((value) => value !== start && value !== goal);
+}
+
+function findFixedPiece(
+  moves: readonly CubeMove[],
+  states: readonly CubeViewState[],
+  trackedCubieId: string,
+): string | undefined {
+  const initial = Cube.solved().getState();
+  return trackedCandidates('edge', 'position')
+    .filter(({ cubieId }) => cubieId !== trackedCubieId)
+    .map(({ notation }) => `${notation} edge`)
+    .find((notation) =>
+      moves.every(
+        (move, index) =>
+          !moveViolatesFix(
+            {
+              id: '',
+              title: '',
+              kind: 'position',
+              start: notation,
+              goal: notation,
+              fix: notation,
+            },
+            initial,
+            states[index - 1] ?? initial,
+            move,
+          ),
+      ),
+    );
+}
+
+function findRestoredSticker(
+  states: readonly CubeViewState[],
+  trackedCubieId: string,
+  fix?: string,
+): string | undefined {
+  const finalState = states.at(-1);
+  if (finalState === undefined) return undefined;
+  return trackedCandidates('edge', 'sticker')
+    .filter(({ cubieId }) => cubieId !== trackedCubieId)
+    .filter(({ notation }) => fix === undefined || !fix.startsWith(notation))
+    .find(
+      (candidate) =>
+        stickerIsAt(finalState, candidate, candidate.notation) &&
+        states
+          .slice(0, -1)
+          .some((state) => !stickerIsAt(state, candidate, candidate.notation)),
+    )?.notation;
+}
+
+function positionFaces(position: CubiePosition): CubeFaceDirection[] {
+  const [x, y, z] = position;
+  return [
+    ...(y === 1 ? (['U'] as const) : y === -1 ? (['D'] as const) : []),
+    ...(x === 1 ? (['R'] as const) : x === -1 ? (['L'] as const) : []),
+    ...(z === 1 ? (['F'] as const) : z === -1 ? (['B'] as const) : []),
+  ];
+}
+
+function stickerNotation(
+  position: CubiePosition,
+  face: CubeFaceDirection,
+): string {
+  return [
+    face,
+    ...positionFaces(position).filter((item) => item !== face),
+  ].join('');
+}
+
+function invertMove(move: CubeMove): CubeMove {
+  if (move.endsWith('2')) return move;
+  return move.endsWith("'") ? (move[0] as CubeMove) : (`${move}'` as CubeMove);
 }
 
 export function evaluateTutorialProgress(
@@ -186,7 +417,9 @@ export function evaluateTutorialProgress(
   const viaSatisfied =
     problem.via === undefined ||
     statesAfterMoves.some((state) =>
-      stickerIsAt(state, tracked, problem.via as string),
+      problem.kind === 'position'
+        ? cubieIsAt(state, tracked.cubieId, problem.via as string)
+        : stickerIsAt(state, tracked, problem.via as string),
     );
   const restoreSatisfied =
     problem.restore === undefined ||

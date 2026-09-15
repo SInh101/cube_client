@@ -481,7 +481,7 @@ export function App() {
       ) {
         setFacePreview(null);
         setTutorialNotice(
-          `Fix: ${tutorialProblem.fix} edgeを動かす手は使えません。`,
+          `Fix: ${tutorialProblem.fix}を動かす手は使えません。`,
         );
         return;
       }
@@ -580,7 +580,9 @@ export function App() {
         ? []
         : [
             {
-              ...stickerLocation(tutorialProblem.via),
+              ...(tutorialProblem.kind === 'position'
+                ? { position: piecePosition(tutorialProblem.via) }
+                : stickerLocation(tutorialProblem.via)),
               label: 'V',
               color: '#38bdf8',
             },

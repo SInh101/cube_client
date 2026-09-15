@@ -7,6 +7,7 @@ import {
   moveViolatesFix,
   TUTORIAL_PROBLEM_GROUPS,
   TUTORIAL_PROBLEMS,
+  verifyTutorialProblem,
   type TutorialProblem,
 } from './tutorialProblems';
 
@@ -20,96 +21,70 @@ function statesAfter(...moves: Move[]): readonly CubeViewState[] {
   });
 }
 
-function problem(id: string): TutorialProblem {
-  const result = TUTORIAL_PROBLEMS.find((candidate) => candidate.id === id);
-  if (result === undefined) throw new Error(`Missing tutorial problem: ${id}`);
-  return result;
-}
+describe('tutorial problem catalog', () => {
+  it('UIの最上位5項目を指定順で定義する', () => {
+    expect(TUTORIAL_PROBLEM_GROUPS.map(({ title }) => title)).toEqual([
+      'エッジ位置',
+      'コーナー位置',
+      'エッジステッカー',
+      'コーナーステッカー',
+      '3点交換',
+    ]);
+  });
+
+  it.each(TUTORIAL_PROBLEM_GROUPS.slice(0, 4))(
+    '$titleにSimple 10、Via 8、Fix 8、Restore 8、Combined 10問を置く',
+    (category) => {
+      expect(
+        category.groups?.map((group) => [group.title, group.problems?.length]),
+      ).toEqual([
+        ['単純問題', 10],
+        ['Via問題', 8],
+        ['Fix問題', 8],
+        ['Restore問題', 8],
+        ['複合問題', 10],
+      ]);
+    },
+  );
+
+  it('3点交換以外の合計176問を重複しないIDで定義する', () => {
+    expect(TUTORIAL_PROBLEMS).toHaveLength(176);
+    expect(new Set(TUTORIAL_PROBLEMS.map(({ id }) => id)).size).toBe(176);
+  });
+
+  it('全問題の既知手順がFixに違反せず、Via・Goal・Restoreを満たす', () => {
+    const unsolvable = TUTORIAL_PROBLEMS.filter(
+      (problem) => !verifyTutorialProblem(problem),
+    );
+    expect(unsolvable.map(({ id }) => id)).toEqual([]);
+  });
+
+  it('各問題種別に必要な条件だけを設定する', () => {
+    for (const category of TUTORIAL_PROBLEM_GROUPS.slice(0, 4)) {
+      const [simple, via, fix, restore, combined] = category.groups ?? [];
+      expect(simple?.problems?.every(noAdditionalCondition)).toBe(true);
+      expect(via?.problems?.every((problem) => problem.via !== undefined)).toBe(
+        true,
+      );
+      expect(fix?.problems?.every((problem) => problem.fix !== undefined)).toBe(
+        true,
+      );
+      expect(
+        restore?.problems?.every((problem) => problem.restore !== undefined),
+      ).toBe(true);
+      expect(
+        combined?.problems?.every(
+          (problem) =>
+            problem.via !== undefined &&
+            problem.fix !== undefined &&
+            problem.restore !== undefined,
+        ),
+      ).toBe(true);
+    }
+  });
+});
 
 describe('tutorial problem rules', () => {
-  it('Single targetをCornerのPositionとStickerへ階層化する', () => {
-    expect(TUTORIAL_PROBLEM_GROUPS).toMatchObject([
-      {
-        id: 'single-target',
-        groups: [
-          {
-            id: 'corner',
-            groups: [{ id: 'corner-position' }, { id: 'corner-sticker' }],
-          },
-        ],
-      },
-    ]);
-    expect(TUTORIAL_PROBLEMS).toHaveLength(11);
-  });
-
-  it('ULFのUステッカーがURBのU面へ着いたときGoalを満たす', () => {
-    const progress = evaluateTutorialProgress(
-      problem('ulf-urb'),
-      solvedState(),
-      statesAfter('U2'),
-    );
-    expect(progress.solved).toBe(true);
-  });
-
-  it('BDRのBステッカーをURBのU面へ向ける条件を判定する', () => {
-    const progress = evaluateTutorialProgress(
-      problem('bdr-urb'),
-      solvedState(),
-      statesAfter("R'"),
-    );
-    expect(progress.solved).toBe(true);
-  });
-
-  it('Viaは追跡ステッカーの位置と向きを判定する', () => {
-    const progress = evaluateTutorialProgress(
-      problem('fld-urb-via-ulf'),
-      solvedState(),
-      statesAfter("L'", 'U2'),
-    );
-    expect(progress.viaSatisfied).toBe(true);
-    expect(progress.solved).toBe(true);
-  });
-
-  it('Previous相当でVia通過stateが消えると未成立へ戻る', () => {
-    const progress = evaluateTutorialProgress(
-      problem('fld-urb-via-ulf'),
-      solvedState(),
-      [],
-    );
-    expect(progress.viaSatisfied).toBe(false);
-  });
-
-  it('Fix対象のUB edgeを含むface・slice手だけを拒否する', () => {
-    const fixProblem = problem('fld-urb-fix-ub');
-    const initial = solvedState();
-    expect(moveViolatesFix(fixProblem, initial, initial, 'U')).toBe(true);
-    expect(moveViolatesFix(fixProblem, initial, initial, 'B2')).toBe(true);
-    expect(moveViolatesFix(fixProblem, initial, initial, "M'")).toBe(true);
-    expect(moveViolatesFix(fixProblem, initial, initial, 'R')).toBe(false);
-    expect(moveViolatesFix(fixProblem, initial, initial, 'L')).toBe(false);
-  });
-
-  it('RestoreはGoal時点の位置と向きを要求する', () => {
-    const progress = evaluateTutorialProgress(
-      problem('fld-urb-restore-ub'),
-      solvedState(),
-      statesAfter("L'", 'U2'),
-    );
-    expect(progress.goalSatisfied).toBe(true);
-    expect(progress.restoreSatisfied).toBe(false);
-    expect(progress.solved).toBe(false);
-  });
-
-  it('Restore問題ではRB edgeをFixする', () => {
-    const restoreProblem = problem('fld-urb-restore-ub');
-    const initial = solvedState();
-    expect(restoreProblem.fix).toBe('RB');
-    expect(moveViolatesFix(restoreProblem, initial, initial, 'R')).toBe(true);
-    expect(moveViolatesFix(restoreProblem, initial, initial, "B'")).toBe(true);
-    expect(moveViolatesFix(restoreProblem, initial, initial, 'E2')).toBe(true);
-    expect(moveViolatesFix(restoreProblem, initial, initial, 'U')).toBe(false);
-  });
-
   it('Position問題はパーツの向きを問わない', () => {
     const positionProblem: TutorialProblem = {
       id: 'test-position',
@@ -135,24 +110,26 @@ describe('tutorial problem rules', () => {
     ).toBe(false);
   });
 
-  it('最初に4問のPosition問題とFix付きPosition問題を並べる', () => {
-    expect(
-      TUTORIAL_PROBLEMS.slice(0, 4).every(({ kind }) => kind === 'position'),
-    ).toBe(true);
-    expect(TUTORIAL_PROBLEMS[4]).toMatchObject({
-      kind: 'position',
-      fix: 'UB',
-    });
-  });
-
-  it('Fix UBの次にRestore UR付き問題を配置する', () => {
-    const fixIndex = TUTORIAL_PROBLEMS.findIndex(
-      ({ id }) => id === 'fld-urb-fix-ub',
-    );
-    expect(TUTORIAL_PROBLEMS[fixIndex + 1]).toMatchObject({
-      id: 'fld-urb-fix-ub-restore-ur',
-      fix: 'UB',
-      restore: 'UR',
-    });
+  it('Fix対象を含む層の手だけを拒否する', () => {
+    const problem: TutorialProblem = {
+      id: 'test-fix',
+      title: 'FLD -> URB fix UB edge',
+      kind: 'sticker',
+      start: 'FLD',
+      goal: 'URB',
+      fix: 'UB edge',
+    };
+    const initial = solvedState();
+    expect(moveViolatesFix(problem, initial, initial, 'U')).toBe(true);
+    expect(moveViolatesFix(problem, initial, initial, 'B2')).toBe(true);
+    expect(moveViolatesFix(problem, initial, initial, 'R')).toBe(false);
   });
 });
+
+function noAdditionalCondition(problem: TutorialProblem): boolean {
+  return (
+    problem.via === undefined &&
+    problem.fix === undefined &&
+    problem.restore === undefined
+  );
+}

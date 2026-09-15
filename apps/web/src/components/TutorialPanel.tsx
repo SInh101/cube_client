@@ -3,6 +3,7 @@ import type {
   TutorialProblemGroup,
   TutorialProgress,
 } from '../tutorial/tutorialProblems';
+import { useState } from 'react';
 import { FaceControlPanel } from './FaceControlPanel';
 import type { FacePreview } from './FaceControl';
 import { SliceControlPanel } from './SliceControlPanel';
@@ -43,164 +44,243 @@ export function TutorialPanel({
   onReset,
 }: TutorialPanelProps) {
   const problem = problems[activeIndex];
+  const activeCategory = problemGroups.find((group) =>
+    problem === undefined ? false : groupContainsProblem(group, problem.id),
+  );
+  const [openGroupId, setOpenGroupId] = useState(
+    activeCategory?.id ?? problemGroups[0]?.id,
+  );
   if (problem === undefined) return null;
+  const currentProblemId = problem.id;
+  const openGroup = problemGroups.find(({ id }) => id === openGroupId);
+  const activeProblemVisible =
+    openGroup !== undefined &&
+    groupContainsProblem(openGroup, currentProblemId);
+
+  function selectGroup(group: TutorialProblemGroup): void {
+    setOpenGroupId(group.id);
+    const firstProblem = firstProblemIn(group);
+    if (
+      firstProblem !== undefined &&
+      !groupContainsProblem(group, currentProblemId)
+    ) {
+      onSelect(problems.findIndex(({ id }) => id === firstProblem.id));
+    }
+  }
 
   return (
     <section className="tutorial-panel" aria-label="Tutorial quiz">
       <nav className="tutorial-index" aria-label="Tutorial problems">
-        <TutorialGroupList
-          groups={problemGroups}
-          problems={problems}
-          activeIndex={activeIndex}
-          clearedProblemIds={clearedProblemIds}
-          disabled={disabled}
-          onSelect={onSelect}
-        />
+        <ul className="tutorial-category-list">
+          {problemGroups.map((group) => {
+            const expanded = group.id === openGroupId;
+            return (
+              <li key={group.id}>
+                <button
+                  type="button"
+                  className="tutorial-category-button"
+                  aria-expanded={expanded}
+                  disabled={disabled}
+                  onClick={() => selectGroup(group)}
+                >
+                  <span>{group.title}</span>
+                  <span aria-hidden="true">{expanded ? '−' : '+'}</span>
+                </button>
+                {expanded &&
+                  (group.groups !== undefined ? (
+                    <TutorialGroupList
+                      groups={group.groups}
+                      problems={problems}
+                      activeIndex={activeIndex}
+                      clearedProblemIds={clearedProblemIds}
+                      disabled={disabled}
+                      onSelect={onSelect}
+                    />
+                  ) : (
+                    <p className="tutorial-empty-group">
+                      問題は今後追加予定です。
+                    </p>
+                  ))}
+              </li>
+            );
+          })}
+        </ul>
       </nav>
 
-      <div className="tutorial-problem-card">
-        <div>
-          <p className="tutorial-problem-card__eyebrow">
-            Quiz {activeIndex + 1} / {problems.length}
-          </p>
-          <h2>{problem.title}</h2>
-        </div>
-        <output
-          className="tutorial-result"
-          data-solved={progress.solved}
-          aria-label="Current goal status"
-        >
-          {progress.solved ? 'O' : 'X'}
-        </output>
-        <dl className="tutorial-conditions">
-          <div>
-            <dt>Start</dt>
-            <dd>{problem.start}</dd>
-          </div>
-          <div>
-            <dt>Goal</dt>
-            <dd>{problem.goal}</dd>
-          </div>
-          {problem.via !== undefined && (
+      {activeProblemVisible && (
+        <>
+          <div className="tutorial-problem-card">
             <div>
-              <dt>Via</dt>
-              <dd>
-                {problem.via} {progress.viaSatisfied ? '✓' : ''}
-              </dd>
+              <p className="tutorial-problem-card__eyebrow">
+                Quiz {activeIndex + 1} / {problems.length}
+              </p>
+              <h2>{problem.title}</h2>
             </div>
-          )}
-          {problem.fix !== undefined && (
-            <div>
-              <dt>Fix</dt>
-              <dd>{problem.fix} edge</dd>
-            </div>
-          )}
-          {problem.restore !== undefined && (
-            <div>
-              <dt>Restore</dt>
-              <dd>{problem.restore}</dd>
-            </div>
-          )}
-          <div>
-            <dt>Moves</dt>
-            <dd>{moveCount}</dd>
+            <output
+              className="tutorial-result"
+              data-solved={progress.solved}
+              aria-label="Current goal status"
+            >
+              {progress.solved ? 'O' : 'X'}
+            </output>
+            <dl className="tutorial-conditions">
+              <div>
+                <dt>Start</dt>
+                <dd>{problem.start}</dd>
+              </div>
+              <div>
+                <dt>Goal</dt>
+                <dd>{problem.goal}</dd>
+              </div>
+              {problem.via !== undefined && (
+                <div>
+                  <dt>Via</dt>
+                  <dd>
+                    {problem.via} {progress.viaSatisfied ? '✓' : ''}
+                  </dd>
+                </div>
+              )}
+              {problem.fix !== undefined && (
+                <div>
+                  <dt>Fix</dt>
+                  <dd>{problem.fix}</dd>
+                </div>
+              )}
+              {problem.restore !== undefined && (
+                <div>
+                  <dt>Restore</dt>
+                  <dd>{problem.restore}</dd>
+                </div>
+              )}
+              <div>
+                <dt>Moves</dt>
+                <dd>{moveCount}</dd>
+              </div>
+            </dl>
+            {notice !== undefined && (
+              <p className="tutorial-notice" role="status">
+                {notice}
+              </p>
+            )}
           </div>
-        </dl>
-        {notice !== undefined && (
-          <p className="tutorial-notice" role="status">
-            {notice}
-          </p>
-        )}
-      </div>
 
-      <aside
-        className="tutorial-marker-guide"
-        aria-labelledby="marker-guide-title"
-      >
-        <div className="tutorial-marker-guide__intro">
-          <h2 id="marker-guide-title">How to read the quiz</h2>
-          <p>
-            In <code>FLD -&gt; URB</code>, move the <strong>F sticker</strong>{' '}
-            at FLD to the <strong>U face</strong> at URB. The first letter
-            identifies the sticker and all letters identify its position.
-          </p>
-          <p>
-            When <code>corner</code> or <code>edge</code> is shown, move the
-            whole colored piece to the destination; its orientation does not
-            matter.
-          </p>
-        </div>
-        <dl className="tutorial-marker-guide__items">
-          <div>
-            <dt>
-              <MarkerBadge kind="tracked">●</MarkerBadge> Tracked
-            </dt>
-            <dd>The colored sticker or piece you move to the Goal.</dd>
-          </div>
-          <div>
-            <dt>
-              <MarkerBadge kind="goal">G</MarkerBadge> Goal
-            </dt>
-            <dd>The destination face and position.</dd>
-          </div>
-          <div>
-            <dt>
-              <MarkerBadge kind="via">V</MarkerBadge> Via
-            </dt>
-            <dd>The tracked sticker must face here at least once.</dd>
-          </div>
-          <div>
-            <dt>
-              <MarkerBadge kind="fix">F</MarkerBadge> Fix
-            </dt>
-            <dd>This piece must not move. Forbidden turns are rejected.</dd>
-          </div>
-          <div>
-            <dt>
-              <MarkerBadge kind="restore">R</MarkerBadge> Restore
-            </dt>
-            <dd>
-              The solid R is the correct location. The translucent R follows its
-              sticker; return both to the same place when you reach Goal.
-            </dd>
-          </div>
-          <div>
-            <dt>
-              <span className="tutorial-status-key">
-                <b>X</b>
-                <b>O</b>
-              </span>{' '}
-              Status
-            </dt>
-            <dd>X is not solved yet; O means every condition is satisfied.</dd>
-          </div>
-        </dl>
-        <p className="tutorial-marker-guide__note">
-          Gray stickers are not being tracked. U, R, F, D, L and B are face
-          names; changing the View does not turn the cube or add a move.
-        </p>
-      </aside>
+          <aside
+            className="tutorial-marker-guide"
+            aria-labelledby="marker-guide-title"
+          >
+            <div className="tutorial-marker-guide__intro">
+              <h2 id="marker-guide-title">How to read the quiz</h2>
+              <p>
+                In <code>FLD -&gt; URB</code>, move the{' '}
+                <strong>F sticker</strong> at FLD to the <strong>U face</strong>{' '}
+                at URB. The first letter identifies the sticker and all letters
+                identify its position.
+              </p>
+              <p>
+                When <code>corner</code> or <code>edge</code> is shown, move the
+                whole colored piece to the destination; its orientation does not
+                matter.
+              </p>
+            </div>
+            <dl className="tutorial-marker-guide__items">
+              <div>
+                <dt>
+                  <MarkerBadge kind="tracked">●</MarkerBadge> Tracked
+                </dt>
+                <dd>The colored sticker or piece you move to the Goal.</dd>
+              </div>
+              <div>
+                <dt>
+                  <MarkerBadge kind="goal">G</MarkerBadge> Goal
+                </dt>
+                <dd>The destination face and position.</dd>
+              </div>
+              <div>
+                <dt>
+                  <MarkerBadge kind="via">V</MarkerBadge> Via
+                </dt>
+                <dd>
+                  The tracked target must pass here. Position quizzes ignore its
+                  orientation.
+                </dd>
+              </div>
+              <div>
+                <dt>
+                  <MarkerBadge kind="fix">F</MarkerBadge> Fix
+                </dt>
+                <dd>This piece must not move. Forbidden turns are rejected.</dd>
+              </div>
+              <div>
+                <dt>
+                  <MarkerBadge kind="restore">R</MarkerBadge> Restore
+                </dt>
+                <dd>
+                  The solid R is the correct location. The translucent R follows
+                  its sticker; return both to the same place when you reach
+                  Goal.
+                </dd>
+              </div>
+              <div>
+                <dt>
+                  <span className="tutorial-status-key">
+                    <b>X</b>
+                    <b>O</b>
+                  </span>{' '}
+                  Status
+                </dt>
+                <dd>
+                  X is not solved yet; O means every condition is satisfied.
+                </dd>
+              </div>
+            </dl>
+            <p className="tutorial-marker-guide__note">
+              Gray stickers are not being tracked. U, R, F, D, L and B are face
+              names; changing the View does not turn the cube or add a move.
+            </p>
+          </aside>
 
-      <FaceControlPanel
-        state={state}
-        onMove={onMove}
-        onPreviewChange={onPreviewChange}
-        disabled={disabled}
-      />
-      <SliceControlPanel onMove={onMove} disabled={disabled} />
-      <div className="tutorial-history-controls">
-        <button
-          type="button"
-          disabled={disabled || moveCount === 0}
-          onClick={onPrevious}
-        >
-          Previous
-        </button>
-        <button type="button" disabled={disabled} onClick={onReset}>
-          Reset
-        </button>
-      </div>
+          <FaceControlPanel
+            state={state}
+            onMove={onMove}
+            onPreviewChange={onPreviewChange}
+            disabled={disabled}
+          />
+          <SliceControlPanel onMove={onMove} disabled={disabled} />
+          <div className="tutorial-history-controls">
+            <button
+              type="button"
+              disabled={disabled || moveCount === 0}
+              onClick={onPrevious}
+            >
+              Previous
+            </button>
+            <button type="button" disabled={disabled} onClick={onReset}>
+              Reset
+            </button>
+          </div>
+        </>
+      )}
     </section>
+  );
+}
+
+function groupContainsProblem(
+  group: TutorialProblemGroup,
+  problemId: string,
+): boolean {
+  return (
+    group.problems?.some(({ id }) => id === problemId) === true ||
+    group.groups?.some((child) => groupContainsProblem(child, problemId)) ===
+      true
+  );
+}
+
+function firstProblemIn(
+  group: TutorialProblemGroup,
+): TutorialProblem | undefined {
+  return (
+    group.problems?.[0] ??
+    group.groups?.map(firstProblemIn).find((problem) => problem !== undefined)
   );
 }
 

@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 
 import { Cube } from '@rubiks-learning/cube-core';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -64,7 +70,8 @@ describe('TutorialPanel', () => {
     ).toBeTruthy();
   });
 
-  it('問題をSingle target、Corner、Position／Stickerの階層で表示する', () => {
+  it('5項目を表示し、クリックした項目の問題だけを展開する', () => {
+    const onSelect = vi.fn();
     render(
       <TutorialPanel
         problems={TUTORIAL_PROBLEMS}
@@ -80,7 +87,7 @@ describe('TutorialPanel', () => {
         moveCount={0}
         state={Cube.solved().getState()}
         disabled={false}
-        onSelect={vi.fn()}
+        onSelect={onSelect}
         onMove={vi.fn()}
         onPreviewChange={vi.fn()}
         onPrevious={vi.fn()}
@@ -91,13 +98,34 @@ describe('TutorialPanel', () => {
     const index = screen.getByRole('navigation', {
       name: 'Tutorial problems',
     });
-    for (const heading of ['Single target', 'Corner', 'Position', 'Sticker']) {
-      expect(
-        within(index).getByRole('heading', { name: heading }),
-      ).toBeTruthy();
+    const categoryNames = [
+      'エッジ位置',
+      'コーナー位置',
+      'エッジステッカー',
+      'コーナーステッカー',
+      '3点交換',
+    ];
+    for (const name of categoryNames) {
+      expect(within(index).getByRole('button', { name })).toBeTruthy();
     }
-    expect(within(index).getAllByRole('button')).toHaveLength(
-      TUTORIAL_PROBLEMS.length,
+    expect(
+      within(index)
+        .getByRole('button', { name: 'エッジ位置' })
+        .getAttribute('aria-expanded'),
+    ).toBe('true');
+    expect(within(index).getAllByRole('heading')).toHaveLength(5);
+
+    fireEvent.click(
+      within(index).getByRole('button', { name: 'コーナー位置' }),
     );
+    expect(onSelect).toHaveBeenCalledWith(44);
+    expect(
+      within(index)
+        .getByRole('button', { name: 'コーナー位置' })
+        .getAttribute('aria-expanded'),
+    ).toBe('true');
+
+    fireEvent.click(within(index).getByRole('button', { name: '3点交換' }));
+    expect(within(index).getByText('問題は今後追加予定です。')).toBeTruthy();
   });
 });

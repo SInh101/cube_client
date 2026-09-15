@@ -43,6 +43,8 @@ Position問題はSticker問題より低難度、Sticker問題は高難度とす�
 Sticker問題の `Via ULF` は、追跡中のステッカーがULF位置のU面へ一度以上来る条件を表す。
 追跡対象のコーナーパーツがULF位置へ入っただけでは成立せず、ステッカーの向きも一致する必要がある。
 
+Position問題の `Via ULF corner` または `Via UB edge` は、追跡中のパーツが指定位置へ一度以上来る条件を表す。向きは問わない。
+
 `Via` の成立履歴は、現在残っている手順を先頭から適用した各状態を使って判定する。
 一度成立した `Via` はその後ステッカーが別の位置へ移っても維持されるが、`Previous` で通過手まで取り消した場合は未成立へ戻る。
 
@@ -96,35 +98,32 @@ Restoreは必ずSticker条件として表記し、`corner` または `edge` を�
 - 未達状態は大きな `X`、達成状態は大きな `O` で表示する。
 - 音声通知は初期実装の対象外とする。
 
-## Initial Problems
+## Problem Catalog and Authoring
 
-初期実装では次の問題を、この順序で出題する。最初の5問をPosition問題の導入、その後をSticker問題とする。
+UIの最上位階層は、次の順序とする。
 
-1. `ULF corner -> URB corner`
-2. `BDR corner -> URB corner`
-3. `FLD corner -> ULF corner`
-4. `FLD corner -> URB corner`
-5. `FLD corner -> URB corner fix UB edge`
-6. `ULF -> URB`
-7. `FLD -> URB via ULF`
-8. `BDR -> URB`
-9. `FLD -> URB fix UB edge`
-10. `FLD -> URB fix UB edge restore UR`
-11. `FLD -> URB restore UB fix RB edge`
+1. `エッジ位置`
+2. `コーナー位置`
+3. `エッジステッカー`
+4. `コーナーステッカー`
+5. `3点交換`
 
-各問題の意味は次のとおり。
+最上位項目を選択したときだけ、その配下の問題を表示する。`3点交換` 以外の各階層には次の問題群を置く。
 
-- `ULF corner -> URB corner`: ULFコーナーパーツを、向きを問わずURBコーナー位置へ移す。
-- `BDR corner -> URB corner`: BDRコーナーパーツを、向きを問わずURBコーナー位置へ移す。
-- `FLD corner -> ULF corner`: FLDコーナーパーツを、向きを問わずULFコーナー位置へ移す。
-- `FLD corner -> URB corner`: FLDコーナーパーツを、向きを問わずURBコーナー位置へ移す。
-- `FLD corner -> URB corner fix UB edge`: UBエッジを一度も動かさず、FLDコーナーパーツを向きを問わずURBコーナー位置へ移す。
-- `ULF -> URB`: ULFのUステッカーをURB位置のU面へ移す。
-- `FLD -> URB via ULF`: FLDのFステッカーをURB位置のU面へ移し、その途中でULF位置のU面を一度以上通過させる。
-- `BDR -> URB`: BDRのBステッカーをURB位置のU面へ移す。
-- `FLD -> URB fix UB edge`: FLDのFステッカーをURB位置のU面へ移し、試行中はUBエッジを一度も動かさない。
-- `FLD -> URB fix UB edge restore UR`: FLDのFステッカーをURB位置のU面へ移し、試行中はUBエッジを一度も動かさず、Goal成立時には開始時のUR位置のUステッカーを元の位置・向きへ戻す。
-- `FLD -> URB restore UB fix RB edge`: FLDのFステッカーをURB位置のU面へ移し、試行中はRBエッジを一度も動かさず、Goal成立時には開始時のUB位置のUステッカーを元の位置・向きへ戻す。
+- `単純問題`: 10問。追加条件なし。
+- `Via問題`: 8問。Via条件あり。
+- `Fix問題`: 8問。Fix条件あり。
+- `Restore問題`: 8問。Restore条件あり。
+- `複合問題`: 10問。Via、Fix、Restore条件あり。
+
+作問時は、各問題にUIへ表示しない既知の解答手順 `verificationMoves` を登録する。自動テストでは完成状態からこの手順を1手ずつ適用し、次のすべてを検証する。
+
+- どの手もFix対象を動かさない。
+- Via条件を満たす状態を通過する。
+- 最終状態でGoalとRestore条件を満たす。
+- 階層ごとの問題数と問題IDの一意性を満たす。
+
+今後問題を追加・変更するときも、正解可能性テストを成功させることを必須とする。
 
 ## Camera
 
