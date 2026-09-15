@@ -22,6 +22,13 @@ export interface TutorialProblem {
   readonly restore?: string;
 }
 
+export interface TutorialProblemGroup {
+  readonly id: string;
+  readonly title: string;
+  readonly groups?: readonly TutorialProblemGroup[];
+  readonly problems?: readonly TutorialProblem[];
+}
+
 export interface TutorialProgress {
   readonly goalSatisfied: boolean;
   readonly viaSatisfied: boolean;
@@ -34,7 +41,7 @@ interface TrackedSticker {
   readonly color: CubeColorDto;
 }
 
-export const TUTORIAL_PROBLEMS: readonly TutorialProblem[] = [
+const CORNER_POSITION_PROBLEMS: readonly TutorialProblem[] = [
   {
     id: 'ulf-corner-urb-corner',
     title: 'ULF corner -> URB corner',
@@ -71,6 +78,9 @@ export const TUTORIAL_PROBLEMS: readonly TutorialProblem[] = [
     goal: 'URB corner',
     fix: 'UB',
   },
+] as const;
+
+const CORNER_STICKER_PROBLEMS: readonly TutorialProblem[] = [
   {
     id: 'ulf-urb',
     title: 'ULF -> URB',
@@ -120,6 +130,47 @@ export const TUTORIAL_PROBLEMS: readonly TutorialProblem[] = [
     fix: 'RB',
   },
 ] as const;
+
+/**
+ * Tutorialの目次。今後はsingle-target配下へedgeを、同じ形式で
+ * three-cycleを最上位へ追加できる。
+ */
+export const TUTORIAL_PROBLEM_GROUPS: readonly TutorialProblemGroup[] = [
+  {
+    id: 'single-target',
+    title: 'Single target',
+    groups: [
+      {
+        id: 'corner',
+        title: 'Corner',
+        groups: [
+          {
+            id: 'corner-position',
+            title: 'Position',
+            problems: CORNER_POSITION_PROBLEMS,
+          },
+          {
+            id: 'corner-sticker',
+            title: 'Sticker',
+            problems: CORNER_STICKER_PROBLEMS,
+          },
+        ],
+      },
+    ],
+  },
+] as const;
+
+export const TUTORIAL_PROBLEMS: readonly TutorialProblem[] =
+  flattenTutorialProblems(TUTORIAL_PROBLEM_GROUPS);
+
+export function flattenTutorialProblems(
+  groups: readonly TutorialProblemGroup[],
+): readonly TutorialProblem[] {
+  return groups.flatMap((group) => [
+    ...(group.problems ?? []),
+    ...flattenTutorialProblems(group.groups ?? []),
+  ]);
+}
 
 export function evaluateTutorialProgress(
   problem: TutorialProblem,

@@ -45,6 +45,7 @@ import {
   stickerLocation,
   trackedPieceView,
   trackedStickerMarker,
+  TUTORIAL_PROBLEM_GROUPS,
   TUTORIAL_PROBLEMS,
 } from './tutorial/tutorialProblems';
 
@@ -874,6 +875,7 @@ export function App() {
                 >
                   <TutorialPanel
                     problems={TUTORIAL_PROBLEMS}
+                    problemGroups={TUTORIAL_PROBLEM_GROUPS}
                     activeIndex={tutorialProblemIndex}
                     clearedProblemIds={clearedTutorialIds}
                     progress={tutorialProgress}

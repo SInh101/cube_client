@@ -1,5 +1,6 @@
 import type {
   TutorialProblem,
+  TutorialProblemGroup,
   TutorialProgress,
 } from '../tutorial/tutorialProblems';
 import { FaceControlPanel } from './FaceControlPanel';
@@ -10,6 +11,7 @@ import './tutorial-panel.css';
 
 export interface TutorialPanelProps {
   readonly problems: readonly TutorialProblem[];
+  readonly problemGroups: readonly TutorialProblemGroup[];
   readonly activeIndex: number;
   readonly clearedProblemIds: ReadonlySet<string>;
   readonly progress: TutorialProgress;
@@ -26,6 +28,7 @@ export interface TutorialPanelProps {
 
 export function TutorialPanel({
   problems,
+  problemGroups,
   activeIndex,
   clearedProblemIds,
   progress,
@@ -44,23 +47,16 @@ export function TutorialPanel({
 
   return (
     <section className="tutorial-panel" aria-label="Tutorial quiz">
-      <ol className="tutorial-problem-list">
-        {problems.map((candidate, index) => (
-          <li key={candidate.id}>
-            <button
-              type="button"
-              aria-current={index === activeIndex ? 'true' : undefined}
-              disabled={disabled}
-              onClick={() => onSelect(index)}
-            >
-              <span aria-hidden="true">
-                {clearedProblemIds.has(candidate.id) ? '○' : '·'}
-              </span>{' '}
-              {candidate.title}
-            </button>
-          </li>
-        ))}
-      </ol>
+      <nav className="tutorial-index" aria-label="Tutorial problems">
+        <TutorialGroupList
+          groups={problemGroups}
+          problems={problems}
+          activeIndex={activeIndex}
+          clearedProblemIds={clearedProblemIds}
+          disabled={disabled}
+          onSelect={onSelect}
+        />
+      </nav>
 
       <div className="tutorial-problem-card">
         <div>
@@ -205,6 +201,69 @@ export function TutorialPanel({
         </button>
       </div>
     </section>
+  );
+}
+
+function TutorialGroupList({
+  groups,
+  problems,
+  activeIndex,
+  clearedProblemIds,
+  disabled,
+  onSelect,
+  depth = 0,
+}: {
+  readonly groups: readonly TutorialProblemGroup[];
+  readonly problems: readonly TutorialProblem[];
+  readonly activeIndex: number;
+  readonly clearedProblemIds: ReadonlySet<string>;
+  readonly disabled: boolean;
+  readonly onSelect: (index: number) => void;
+  readonly depth?: number;
+}) {
+  return (
+    <ul className="tutorial-group-list" data-depth={depth}>
+      {groups.map((group) => (
+        <li key={group.id} className="tutorial-group">
+          <h2 className="tutorial-group__title">{group.title}</h2>
+          {group.groups !== undefined && (
+            <TutorialGroupList
+              groups={group.groups}
+              problems={problems}
+              activeIndex={activeIndex}
+              clearedProblemIds={clearedProblemIds}
+              disabled={disabled}
+              onSelect={onSelect}
+              depth={depth + 1}
+            />
+          )}
+          {group.problems !== undefined && (
+            <ol className="tutorial-problem-list">
+              {group.problems.map((candidate) => {
+                const index = problems.findIndex(
+                  (problem) => problem.id === candidate.id,
+                );
+                return (
+                  <li key={candidate.id}>
+                    <button
+                      type="button"
+                      aria-current={index === activeIndex ? 'true' : undefined}
+                      disabled={disabled}
+                      onClick={() => onSelect(index)}
+                    >
+                      <span aria-hidden="true">
+                        {clearedProblemIds.has(candidate.id) ? '○' : '·'}
+                      </span>{' '}
+                      {candidate.title}
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </li>
+      ))}
+    </ul>
   );
 }
 

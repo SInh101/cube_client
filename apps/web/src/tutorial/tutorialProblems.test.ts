@@ -5,6 +5,7 @@ import type { CubeViewState } from '../components/cubeViewModel';
 import {
   evaluateTutorialProgress,
   moveViolatesFix,
+  TUTORIAL_PROBLEM_GROUPS,
   TUTORIAL_PROBLEMS,
   type TutorialProblem,
 } from './tutorialProblems';
@@ -26,6 +27,21 @@ function problem(id: string): TutorialProblem {
 }
 
 describe('tutorial problem rules', () => {
+  it('Single targetをCornerのPositionとStickerへ階層化する', () => {
+    expect(TUTORIAL_PROBLEM_GROUPS).toMatchObject([
+      {
+        id: 'single-target',
+        groups: [
+          {
+            id: 'corner',
+            groups: [{ id: 'corner-position' }, { id: 'corner-sticker' }],
+          },
+        ],
+      },
+    ]);
+    expect(TUTORIAL_PROBLEMS).toHaveLength(11);
+  });
+
   it('ULFのUステッカーがURBのU面へ着いたときGoalを満たす', () => {
     const progress = evaluateTutorialProgress(
       problem('ulf-urb'),

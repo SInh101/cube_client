@@ -3,12 +3,50 @@
   gap: 1rem;
 }
 
+.tutorial-index {
+  padding: 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  background: #f8fafc;
+}
+
+.tutorial-group-list,
 .tutorial-problem-list {
-  display: grid;
-  gap: 0.35rem;
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.tutorial-group-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.tutorial-group-list[data-depth='1'],
+.tutorial-group-list[data-depth='2'] {
+  margin-top: 0.45rem;
+  padding-left: 0.8rem;
+  border-left: 2px solid #cbd5e1;
+}
+
+.tutorial-group__title {
+  margin: 0;
+  color: #334155;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.tutorial-group-list[data-depth='0']
+  > .tutorial-group
+  > .tutorial-group__title {
+  color: #0f172a;
+  font-size: 1.05rem;
+}
+
+.tutorial-problem-list {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
 }
 
 .tutorial-problem-list button {
