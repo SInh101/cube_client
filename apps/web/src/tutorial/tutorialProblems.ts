@@ -1,5 +1,10 @@
 import type { CubeColorDto } from '@rubiks-learning/api-contract';
 import { Cube } from '@rubiks-learning/cube-core';
+import {
+  PARITY_PROBLEM_GROUP,
+  permutationParity,
+  type ParityQuizConfig,
+} from './parityQuiz';
 
 import {
   CUBE_FACE_DIRECTIONS,
@@ -15,7 +20,8 @@ import {
 export interface TutorialProblem {
   readonly id: string;
   readonly title: string;
-  readonly kind: 'position' | 'sticker';
+  readonly kind: 'position' | 'sticker' | 'parity';
+  readonly parity?: ParityQuizConfig;
   readonly start: string;
   readonly goal: string;
   readonly via?: string;
@@ -89,6 +95,7 @@ export const TUTORIAL_PROBLEM_GROUPS: readonly TutorialProblemGroup[] = [
   createCategory('edge-sticker', 'エッジステッカー', 'edge', 'sticker'),
   createCategory('corner-sticker', 'コーナーステッカー', 'corner', 'sticker'),
   { id: 'three-cycle', title: '3点交換', problems: [] },
+  PARITY_PROBLEM_GROUP,
 ];
 
 export const TUTORIAL_PROBLEMS: readonly TutorialProblem[] =
@@ -114,6 +121,12 @@ export function verifyTutorialProblem(problem: TutorialProblem): boolean {
     }
     cube.applyMove(move);
     states.push(cube.getState());
+  }
+  if (problem.parity !== undefined) {
+    return (
+      permutationParity(cube.getState(), problem.parity.pieces) ===
+      problem.parity.answer
+    );
   }
   return evaluateTutorialProgress(problem, initialState, states).solved;
 }
@@ -408,6 +421,13 @@ export function evaluateTutorialProgress(
   initialState: CubeViewState,
   statesAfterMoves: readonly CubeViewState[],
 ): TutorialProgress {
+  if (problem.kind === 'parity')
+    return {
+      goalSatisfied: false,
+      viaSatisfied: true,
+      restoreSatisfied: true,
+      solved: false,
+    };
   const currentState = statesAfterMoves.at(-1) ?? initialState;
   const tracked = trackedStickerAt(initialState, problem.start);
   const goalSatisfied =

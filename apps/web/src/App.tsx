@@ -1,3 +1,10 @@
+import {
+  startParitySession,
+  answerParitySession,
+  permutationParity,
+  type Parity,
+  type ParitySession,
+} from './tutorial/parityQuiz';
 import type {
   CommutatorPartDto,
   CreateCubeResponseDto,
@@ -98,6 +105,9 @@ export function App() {
   const [toolMode, setToolMode] = useState<ToolMode>('practice');
   const [cameraView, setCameraView] = useState<CubeCameraView>('UFR');
   const [tutorialProblemIndex, setTutorialProblemIndex] = useState(0);
+  const [paritySession, setParitySession] = useState<ParitySession | null>(
+    null,
+  );
   const [tutorialStartState, setTutorialStartState] = useState<
     CubeStateResponseDto['state'] | null
   >(null);
@@ -463,19 +473,38 @@ export function App() {
   const startTutorialProblem = useCallback(
     async (problemIndex: number): Promise<void> => {
       if (isAnimating || resetInFlightRef.current) return;
+      const selected = TUTORIAL_PROBLEMS[problemIndex];
+      if (selected === undefined) return;
       setTutorialProblemIndex(problemIndex);
+      setFacePreview(null);
+      setLastMove(null);
+      if (selected.parity !== undefined) {
+        setParitySession(startParitySession(selected.parity));
+        setTutorialStartState(solvedStateRef.current);
+        return;
+      }
+      setParitySession(null);
       setTutorialMoves([]);
       setTutorialStates([]);
       setTutorialNotice(undefined);
-      await resetCube();
-      setTutorialStartState(solvedStateRef.current);
+      try {
+        await resetCube();
+        setTutorialStartState(solvedStateRef.current);
+      } catch {
+        setTutorialStartState(null);
+      }
     },
     [isAnimating, resetCube],
   );
 
   const applyTutorialMove = useCallback(
     async (move: CubeMove): Promise<void> => {
-      if (tutorialStartState === null || cubeState === null) return;
+      if (
+        tutorialProblem.kind === 'parity' ||
+        tutorialStartState === null ||
+        cubeState === null
+      )
+        return;
       if (
         moveViolatesFix(tutorialProblem, tutorialStartState, cubeState, move)
       ) {
@@ -527,20 +556,27 @@ export function App() {
 
   const tutorialPiece = useMemo(
     () =>
-      tutorialStartState === null || cubeState === null
+      tutorialProblem.kind === 'parity' ||
+      tutorialStartState === null ||
+      cubeState === null
         ? undefined
         : trackedPieceView(
             tutorialStartState,
             cubeState,
             tutorialProblem.start,
           ),
-    [cubeState, tutorialProblem.start, tutorialStartState],
+    [
+      cubeState,
+      tutorialProblem.kind,
+      tutorialProblem.start,
+      tutorialStartState,
+    ],
   );
   const tutorialMarker = useMemo(
     () =>
       tutorialStartState === null ||
       cubeState === null ||
-      tutorialProblem.kind === 'position'
+      tutorialProblem.kind !== 'sticker'
         ? undefined
         : trackedStickerMarker(
             tutorialStartState,
@@ -568,44 +604,47 @@ export function App() {
     [cubeState, tutorialProblem.restore, tutorialStartState],
   );
   const tutorialPositionMarkers = useMemo(
-    () => [
-      {
-        ...(tutorialProblem.kind === 'position'
-          ? { position: piecePosition(tutorialProblem.goal) }
-          : stickerLocation(tutorialProblem.goal)),
-        label: 'G',
-        color: '#22c55e',
-      },
-      ...(tutorialProblem.via === undefined
+    () =>
+      tutorialProblem.kind === 'parity'
         ? []
         : [
             {
               ...(tutorialProblem.kind === 'position'
-                ? { position: piecePosition(tutorialProblem.via) }
-                : stickerLocation(tutorialProblem.via)),
-              label: 'V',
-              color: '#38bdf8',
+                ? { position: piecePosition(tutorialProblem.goal) }
+                : stickerLocation(tutorialProblem.goal)),
+              label: 'G',
+              color: '#22c55e',
             },
-          ]),
-      ...(tutorialProblem.fix === undefined
-        ? []
-        : [
-            {
-              position: piecePosition(tutorialProblem.fix),
-              label: 'F',
-              color: '#fb7185',
-            },
-          ]),
-      ...(tutorialProblem.restore === undefined
-        ? []
-        : [
-            {
-              ...stickerLocation(tutorialProblem.restore),
-              label: 'R',
-              color: '#c084fc',
-            },
-          ]),
-    ],
+            ...(tutorialProblem.via === undefined
+              ? []
+              : [
+                  {
+                    ...(tutorialProblem.kind === 'position'
+                      ? { position: piecePosition(tutorialProblem.via) }
+                      : stickerLocation(tutorialProblem.via)),
+                    label: 'V',
+                    color: '#38bdf8',
+                  },
+                ]),
+            ...(tutorialProblem.fix === undefined
+              ? []
+              : [
+                  {
+                    position: piecePosition(tutorialProblem.fix),
+                    label: 'F',
+                    color: '#fb7185',
+                  },
+                ]),
+            ...(tutorialProblem.restore === undefined
+              ? []
+              : [
+                  {
+                    ...stickerLocation(tutorialProblem.restore),
+                    label: 'R',
+                    color: '#c084fc',
+                  },
+                ]),
+          ],
     [tutorialProblem],
   );
 
@@ -699,6 +738,28 @@ export function App() {
     [clearTeachingLessons, isAnimating, playbackState.status, startPlayback],
   );
 
+  const parityActive =
+    toolMode === 'tutorial' && tutorialProblem.kind === 'parity';
+  function answerParity(answer: Parity): void {
+    if (
+      !parityActive ||
+      paritySession === null ||
+      tutorialProblem.parity === undefined
+    )
+      return;
+    if (
+      permutationParity(paritySession.state, tutorialProblem.parity.pieces) ===
+      answer
+    ) {
+      setClearedTutorialIds(
+        (current) => new Set([...current, tutorialProblem.id]),
+      );
+    }
+    setParitySession(
+      answerParitySession(paritySession, tutorialProblem.parity, answer),
+    );
+  }
+
   return (
     <main>
       <h1>Rubik&apos;s Cube Learning</h1>
@@ -709,9 +770,13 @@ export function App() {
           <div className="cube-workspace">
             <div className="cube-view-column">
               <CubeView
-                state={cubeState}
+                state={
+                  parityActive && paritySession !== null
+                    ? paritySession.state
+                    : cubeState
+                }
                 cameraView={cameraView}
-                animation={cubeAnimation}
+                animation={parityActive ? undefined : cubeAnimation}
                 preview={facePreview}
                 onAnimationComplete={handleAnimationComplete}
                 highlightedCubieIds={
@@ -887,6 +952,8 @@ export function App() {
                       isAnimating || isResetting || tutorialStartState === null
                     }
                     notice={tutorialNotice}
+                    paritySession={paritySession ?? undefined}
+                    onParityAnswer={answerParity}
                     onSelect={(index) => void startTutorialProblem(index)}
                     onMove={(move) => void applyTutorialMove(move)}
                     onPreviewChange={setFacePreview}

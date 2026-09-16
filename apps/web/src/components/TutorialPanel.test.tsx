@@ -70,7 +70,7 @@ describe('TutorialPanel', () => {
     ).toBeTruthy();
   });
 
-  it('5項目を表示し、クリックした項目の問題だけを展開する', () => {
+  it('6項目を表示し、クリックした項目の問題だけを展開する', () => {
     const onSelect = vi.fn();
     render(
       <TutorialPanel
@@ -104,6 +104,7 @@ describe('TutorialPanel', () => {
       'エッジステッカー',
       'コーナーステッカー',
       '3点交換',
+      '偶奇判定',
     ];
     for (const name of categoryNames) {
       expect(within(index).getByRole('button', { name })).toBeTruthy();

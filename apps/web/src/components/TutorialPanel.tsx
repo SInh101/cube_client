@@ -1,3 +1,4 @@
+import type { Parity, ParitySession } from '../tutorial/parityQuiz';
 import type {
   TutorialProblem,
   TutorialProblemGroup,
@@ -20,6 +21,8 @@ export interface TutorialPanelProps {
   readonly state: CubeViewState;
   readonly disabled: boolean;
   readonly notice?: string;
+  readonly paritySession?: ParitySession;
+  readonly onParityAnswer?: (answer: Parity) => void;
   readonly onSelect: (index: number) => void;
   readonly onMove: (move: CubeMove) => void;
   readonly onPreviewChange: (preview: FacePreview | null) => void;
@@ -37,6 +40,8 @@ export function TutorialPanel({
   state,
   disabled,
   notice,
+  paritySession,
+  onParityAnswer,
   onSelect,
   onMove,
   onPreviewChange,
@@ -107,7 +112,55 @@ export function TutorialPanel({
         </ul>
       </nav>
 
-      {activeProblemVisible && (
+      {activeProblemVisible && problem.parity !== undefined && (
+        <section className="tutorial-marker-guide" aria-label="偶奇判定クイズ">
+          <h2>{problem.title}</h2>
+          <p>
+            {problem.parity.pieces === 'edge' ? 'エッジ12個' : 'コーナー8個'}
+            の位置の置換は、完成状態と比べて偶置換ですか、奇置換ですか？
+            向きは問いません。
+          </p>
+          <p>
+            2個の交換を偶数回で表せる置換が偶置換、奇数回で表せる置換が奇置換です。全6面の色と面名を、Viewで視点を変えて確認できます。
+          </p>
+          {problem.parity.mode === 'random' && (
+            <p>
+              正解・不正解にかかわらず、回答すると新しいシャッフル状態を出題します。
+            </p>
+          )}
+          <p>
+            第{paritySession?.question ?? 1}問 · 正解{' '}
+            {paritySession?.correct ?? 0} / 回答 {paritySession?.attempts ?? 0}
+          </p>
+          <div className="tutorial-history-controls">
+            <button
+              type="button"
+              disabled={disabled || paritySession === undefined}
+              onClick={() => onParityAnswer?.('even')}
+            >
+              偶置換
+            </button>
+            <button
+              type="button"
+              disabled={disabled || paritySession === undefined}
+              onClick={() => onParityAnswer?.('odd')}
+            >
+              奇置換
+            </button>
+          </div>
+          <p role="status" aria-live="polite">
+            {paritySession?.feedback ?? '偶・奇のボタンで回答してください。'}
+          </p>
+          <div className="tutorial-history-controls">
+            <button type="button" disabled={disabled} onClick={onReset}>
+              {problem.parity.mode === 'random'
+                ? 'ランダム練習をリセット'
+                : '固定問題をリセット'}
+            </button>
+          </div>
+        </section>
+      )}
+      {activeProblemVisible && problem.parity === undefined && (
         <>
           <div className="tutorial-problem-card">
             <div>

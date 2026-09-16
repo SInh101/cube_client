@@ -22,13 +22,14 @@ function statesAfter(...moves: Move[]): readonly CubeViewState[] {
 }
 
 describe('tutorial problem catalog', () => {
-  it('UIの最上位5項目を指定順で定義する', () => {
+  it('UIの最上位6項目を指定順で定義する', () => {
     expect(TUTORIAL_PROBLEM_GROUPS.map(({ title }) => title)).toEqual([
       'エッジ位置',
       'コーナー位置',
       'エッジステッカー',
       'コーナーステッカー',
       '3点交換',
+      '偶奇判定',
     ]);
   });
 
@@ -47,9 +48,9 @@ describe('tutorial problem catalog', () => {
     },
   );
 
-  it('3点交換以外の合計176問を重複しないIDで定義する', () => {
-    expect(TUTORIAL_PROBLEMS).toHaveLength(176);
-    expect(new Set(TUTORIAL_PROBLEMS.map(({ id }) => id)).size).toBe(176);
+  it('合計186問を重複しないIDで定義する', () => {
+    expect(TUTORIAL_PROBLEMS).toHaveLength(186);
+    expect(new Set(TUTORIAL_PROBLEMS.map(({ id }) => id)).size).toBe(186);
   });
 
   it('全問題の既知手順がFixに違反せず、Via・Goal・Restoreを満たす', () => {
