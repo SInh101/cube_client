@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { CubeCameraRig, type CubeCameraView } from './cubeCameraRig';
 
 import {
   CUBE_FACE_DIRECTIONS,
@@ -18,6 +19,7 @@ import './cube-view.css';
 export interface CubeViewProps {
   readonly state: CubeViewState;
   readonly cameraView?: CubeCameraView;
+  readonly freeCamera?: boolean;
   readonly animation?: {
     readonly id: number;
     readonly move: CubeMove;
@@ -36,16 +38,7 @@ export interface CubeViewProps {
   }[];
 }
 
-export type CubeCameraView = 'UFR' | 'UBL' | 'DFR' | 'DBL';
-
-const CAMERA_POSITIONS: Readonly<
-  Record<CubeCameraView, readonly [number, number, number]>
-> = {
-  UFR: [5.2, 4.2, 6.4],
-  UBL: [-5.2, 4.2, -6.4],
-  DFR: [5.2, -4.2, 6.4],
-  DBL: [-5.2, -4.2, -6.4],
-};
+export type { CubeCameraView } from './cubeCameraRig';
 
 export interface CubeViewMarker {
   readonly cubieId: string;
@@ -91,6 +84,7 @@ const FACE_NORMALS: Readonly<
 export function CubeView({
   state,
   cameraView = 'UFR',
+  freeCamera = false,
   animation,
   preview,
   onAnimationComplete,
@@ -103,15 +97,18 @@ export function CubeView({
 }: CubeViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const lastPlayedAnimationId = useRef<number | null>(null);
+  const [cameraRig] = useState(() => new CubeCameraRig());
+
+  useEffect(() => {
+    cameraRig.configure(cameraView, freeCamera);
+  }, [cameraRig, cameraView, freeCamera]);
 
   useEffect(() => {
     const container = containerRef.current;
     if (container === null) return;
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
-    camera.position.set(...CAMERA_POSITIONS[cameraView]);
-    camera.lookAt(0, 0, 0);
+    const camera = cameraRig.camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -277,6 +274,7 @@ export function CubeView({
       camera.updateProjectionMatrix();
       renderer.render(scene, camera);
     };
+    cameraRig.attach(renderer.domElement, render);
 
     let animationFrame: number | undefined;
     let completionNotified = false;
@@ -322,6 +320,7 @@ export function CubeView({
     window.addEventListener('resize', render);
 
     return () => {
+      cameraRig.detach();
       window.removeEventListener('resize', render);
       if (animationFrame !== undefined) cancelAnimationFrame(animationFrame);
       for (const disposableGeometry of disposableGeometries) {
@@ -334,7 +333,7 @@ export function CubeView({
     };
   }, [
     state,
-    cameraView,
+    cameraRig,
     animation,
     preview,
     onAnimationComplete,

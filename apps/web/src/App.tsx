@@ -106,6 +106,7 @@ export function App() {
   const [cycleAnalysisError, setCycleAnalysisError] = useState<string>();
   const [toolMode, setToolMode] = useState<ToolMode>('practice');
   const [cameraView, setCameraView] = useState<CubeCameraView>('UFR');
+  const [freeCamera, setFreeCamera] = useState(false);
   const [tutorialProblemIndex, setTutorialProblemIndex] = useState(0);
   const [paritySession, setParitySession] = useState<ParitySession | null>(
     null,
@@ -826,6 +827,7 @@ export function App() {
                     : cubeState
                 }
                 cameraView={cameraView}
+                freeCamera={freeCamera}
                 animation={parityActive ? undefined : cubeAnimation}
                 preview={facePreview}
                 onAnimationComplete={handleAnimationComplete}
@@ -902,7 +904,12 @@ export function App() {
               <CubeCameraControl
                 value={cameraView}
                 disabled={isAnimating}
-                onChange={setCameraView}
+                freeCamera={freeCamera}
+                onFreeCameraChange={setFreeCamera}
+                onChange={(view) => {
+                  setCameraView(view);
+                  setFreeCamera(false);
+                }}
               />
             </div>
             <div className="cube-controls">
