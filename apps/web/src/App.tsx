@@ -44,6 +44,8 @@ import { CubeCameraControl } from './components/CubeCameraControl';
 import type { CubeCameraView } from './components/CubeView';
 import './components/face-controls.css';
 import { ToolModeTabs, type ToolMode } from './components/ToolModeTabs';
+import { BlindfoldPanel } from './components/BlindfoldPanel';
+import { randomScramble } from './analysis/blindfold';
 import { usePlayback } from './playback/usePlayback';
 import {
   evaluateTutorialProgress,
@@ -387,6 +389,50 @@ export function App() {
     clearCommutatorLesson();
     clearCycleLesson();
   }, [clearCommutatorLesson, clearCycleLesson]);
+
+  const scrambleForBlindfold = async (): Promise<string> => {
+    if (
+      cubeId === null ||
+      isAnimating ||
+      resetInFlightRef.current ||
+      playbackState.status === 'playing'
+    )
+      throw new Error('Cube is busy');
+    resetInFlightRef.current = true;
+    setIsResetting(true);
+    pause();
+    const moves = randomScramble();
+    // A paused playback batch may already be persisted beyond the visible cube.
+    const compensation = invertMoves(
+      batchedMoveStatesRef.current.map((item) => item.move),
+    );
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/cubes/${cubeId}/moves`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ moves: [...compensation, ...moves] }),
+        },
+      );
+      if (!response.ok) throw new Error('Scramble failed');
+      const dto = (await response.json()) as MoveBatchResponseDto;
+      const finalState = dto.states.at(-1);
+      if (!finalState) throw new Error('Missing scramble state');
+      batchedMoveStatesRef.current = [];
+      setCubeState(finalState);
+      setLastMove(null);
+      setFacePreview(null);
+      setPreparedMoves([]);
+      setPreparedMovesRevision((current) => current + 1);
+      clearTeachingLessons();
+      setMoveError(false);
+      return moves.join(' ');
+    } finally {
+      resetInFlightRef.current = false;
+      setIsResetting(false);
+    }
+  };
 
   const analyzeSequence = useCallback(
     async (sequence: string, conjugate = ''): Promise<void> => {
@@ -961,6 +1007,23 @@ export function App() {
                     onReset={() =>
                       void startTutorialProblem(tutorialProblemIndex)
                     }
+                  />
+                </section>
+              ) : toolMode === '3bld' ? (
+                <section
+                  id="tool-panel-3bld"
+                  className="tool-mode-panel"
+                  role="tabpanel"
+                  aria-labelledby="tool-mode-3bld"
+                >
+                  <BlindfoldPanel
+                    state={cubeState}
+                    disabled={
+                      isAnimating ||
+                      isResetting ||
+                      playbackState.status === 'playing'
+                    }
+                    onScramble={scrambleForBlindfold}
                   />
                 </section>
               ) : (

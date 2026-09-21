@@ -1,6 +1,6 @@
 import './tool-mode-tabs.css';
 
-export type ToolMode = 'practice' | 'tutorial' | 'analysis';
+export type ToolMode = 'practice' | 'tutorial' | 'analysis' | '3bld';
 
 export interface ToolModeTabsProps {
   readonly value: ToolMode;
@@ -11,6 +11,7 @@ const MODES = [
   { value: 'practice', label: 'Practice' },
   { value: 'tutorial', label: 'Tutorial' },
   { value: 'analysis', label: 'Analysis' },
+  { value: '3bld', label: '3BLD' },
 ] as const;
 
 /** 右カラムの通常操作と教材・解析を切り替える上位navigation。 */

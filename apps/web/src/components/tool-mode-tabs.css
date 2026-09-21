@@ -1,6 +1,6 @@
 .tool-mode-tabs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.35rem;
   padding: 0.3rem;
   border: 1px solid #cbd5e1;
@@ -9,7 +9,7 @@
 }
 
 .tool-mode-tabs [role='tab'] {
-  padding: 0.65rem 1rem;
+  padding: 0.65rem 0.3rem;
   border: 0;
   border-radius: 0.55rem;
   color: #475569;
