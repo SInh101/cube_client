@@ -152,6 +152,7 @@ export function BlindfoldPanel({ state, disabled, onScramble }: Props) {
           setError('');
           setResult(undefined);
           setJudgment(undefined);
+          setScramble('');
           try {
             setScramble(await onScramble());
           } catch {
@@ -163,12 +164,17 @@ export function BlindfoldPanel({ state, disabled, onScramble }: Props) {
       >
         {scrambling ? 'スクランブル中…' : 'ランダムスクランブル'}
       </button>
-      <p className="blindfold-help">現在の状態にランダムな25手を適用します。</p>
+      <p className="blindfold-help">
+        完成状態にリセットしてから、ランダムな25手を適用します。
+      </p>
       {scramble && (
-        <details>
-          <summary>適用したスクランブル</summary>
+        <section aria-label="スクランブル手順">
+          <h3>スクランブル手順</h3>
+          <p className="blindfold-help">
+            手元のキューブを完成状態にし、白を上（U）、緑を前（F）にして、左から順に回してください。
+          </p>
           <p>{scramble}</p>
-        </details>
+        </section>
       )}
       <fieldset disabled={busy}>
         <legend>バッファと文字割り当て</legend>

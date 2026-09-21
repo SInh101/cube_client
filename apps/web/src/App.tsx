@@ -402,31 +402,35 @@ export function App() {
     setIsResetting(true);
     pause();
     const moves = randomScramble();
-    // A paused playback batch may already be persisted beyond the visible cube.
-    const compensation = invertMoves(
-      batchedMoveStatesRef.current.map((item) => item.move),
-    );
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/cubes/${cubeId}/moves`,
-        {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ moves: [...compensation, ...moves] }),
-        },
+      const resetResponse = await fetch(
+        `${API_BASE_URL}/api/cubes/${cubeId}/reset`,
+        { method: 'PUT' },
       );
-      if (!response.ok) throw new Error('Scramble failed');
-      const dto = (await response.json()) as MoveBatchResponseDto;
-      const finalState = dto.states.at(-1);
-      if (!finalState) throw new Error('Missing scramble state');
+      if (!resetResponse.ok) throw new Error('Scramble reset failed');
+      const resetDto = (await resetResponse.json()) as CubeStateResponseDto;
+      // Discard any persisted playback suffix after resetting the cube.
       batchedMoveStatesRef.current = [];
-      setCubeState(finalState);
+      setCubeState(resetDto.state);
       setLastMove(null);
       setFacePreview(null);
       setPreparedMoves([]);
       setPreparedMovesRevision((current) => current + 1);
       clearTeachingLessons();
       setMoveError(false);
+      const response = await fetch(
+        `${API_BASE_URL}/api/cubes/${cubeId}/moves`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ moves }),
+        },
+      );
+      if (!response.ok) throw new Error('Scramble failed');
+      const dto = (await response.json()) as MoveBatchResponseDto;
+      const finalState = dto.states.at(-1);
+      if (!finalState) throw new Error('Missing scramble state');
+      setCubeState(finalState);
       return moves.join(' ');
     } finally {
       resetInFlightRef.current = false;
