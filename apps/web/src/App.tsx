@@ -41,6 +41,8 @@ import {
   type CycleSelection,
 } from './analysis/cycleVisualization';
 import { CubeCameraControl } from './components/CubeCameraControl';
+import { CubeColorSchemeProvider } from './components/CubeColorSchemeContext';
+import { CubeOrientationControl } from './components/CubeOrientationControl';
 import type { CubeCameraView } from './components/CubeView';
 import './components/face-controls.css';
 import { ToolModeTabs, type ToolMode } from './components/ToolModeTabs';
@@ -65,6 +67,14 @@ const KEYBOARD_MOVES = ['R', 'L', 'U', 'D', 'F', 'B', 'M', 'E', 'S'] as const;
 const API_BASE_URL = '';
 
 export function App() {
+  return (
+    <CubeColorSchemeProvider>
+      <CubeLearningApp />
+    </CubeColorSchemeProvider>
+  );
+}
+
+function CubeLearningApp() {
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [cubeId, setCubeId] = useState<string | null>(null);
   const [cubeState, setCubeState] = useState<
@@ -910,6 +920,13 @@ export function App() {
                   setCameraView(view);
                   setFreeCamera(false);
                 }}
+              />
+              <CubeOrientationControl
+                disabled={
+                  isAnimating ||
+                  isResetting ||
+                  playbackState.status === 'playing'
+                }
               />
             </div>
             <div className="cube-controls">

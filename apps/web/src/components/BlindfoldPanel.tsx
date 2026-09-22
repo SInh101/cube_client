@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useCubeColorScheme } from './CubeColorSchemeContext';
+import { STICKER_COLORS } from './cubeColorScheme';
 import type { Face } from '@rubiks-learning/cube-core';
 import type { CubeViewState } from './cubeViewModel';
 import {
@@ -63,6 +65,7 @@ interface Analysis {
   orientations: string[];
 }
 export function BlindfoldPanel({ state, disabled, onScramble }: Props) {
+  const { colorMap } = useCubeColorScheme();
   const [settings, setSettings] = useState(loadSettings);
   const [memo, setMemo] = useState({ edge: '', corner: '' });
   const [mode, setMode] = useState<'analysis' | 'practice'>('analysis');
@@ -210,7 +213,9 @@ export function BlindfoldPanel({ state, disabled, onScramble }: Props) {
                       <div
                         key={i}
                         className="blindfold-sticker blindfold-center"
-                        style={{ backgroundColor: color }}
+                        style={{
+                          backgroundColor: STICKER_COLORS[colorMap[color]],
+                        }}
                       >
                         {face}
                       </div>
@@ -227,7 +232,9 @@ export function BlindfoldPanel({ state, disabled, onScramble }: Props) {
                       key={i}
                       className="blindfold-sticker"
                       data-selected={selected}
-                      style={{ backgroundColor: color }}
+                      style={{
+                        backgroundColor: STICKER_COLORS[colorMap[color]],
+                      }}
                     >
                       <button
                         type="button"

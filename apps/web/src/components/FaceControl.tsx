@@ -1,5 +1,7 @@
 import type { CSSProperties } from 'react';
-import type { CubeColorDto, FaceStateDto } from '@rubiks-learning/api-contract';
+import type { FaceStateDto } from '@rubiks-learning/api-contract';
+import { useCubeColorScheme } from './CubeColorSchemeContext';
+import { STICKER_COLORS } from './cubeColorScheme';
 
 import type { CubeFaceDirection, CubeMove } from './cubeViewModel';
 
@@ -18,15 +20,6 @@ export interface FaceControlProps {
   readonly disabled?: boolean;
 }
 
-const STICKER_COLORS: Record<CubeColorDto, string> = {
-  white: '#f8fafc',
-  red: '#dc2626',
-  green: '#16a34a',
-  yellow: '#facc15',
-  orange: '#f97316',
-  blue: '#2563eb',
-};
-
 export function FaceControl({
   face,
   colors,
@@ -34,6 +27,7 @@ export function FaceControl({
   onPreviewChange,
   disabled = false,
 }: FaceControlProps) {
+  const { colorMap } = useCubeColorScheme();
   const preview = (direction: PreviewDirection) =>
     onPreviewChange({ face, direction });
 
@@ -65,7 +59,9 @@ export function FaceControl({
             key={index}
             className="face-control__sticker"
             style={
-              { '--sticker-color': STICKER_COLORS[color] } as CSSProperties
+              {
+                '--sticker-color': STICKER_COLORS[colorMap[color]],
+              } as CSSProperties
             }
           >
             {index === 4 ? face : ''}

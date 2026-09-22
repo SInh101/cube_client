@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { CubeCameraRig, type CubeCameraView } from './cubeCameraRig';
+import { useCubeColorScheme } from './CubeColorSchemeContext';
+import { STICKER_COLORS } from './cubeColorScheme';
 
 import {
   CUBE_FACE_DIRECTIONS,
@@ -59,15 +61,6 @@ export interface CubeViewPositionMarker {
   readonly opacity?: number;
 }
 
-const STICKER_COLORS = {
-  white: 0xf8fafc,
-  red: 0xdc2626,
-  green: 0x16a34a,
-  yellow: 0xfacc15,
-  orange: 0xf97316,
-  blue: 0x2563eb,
-} as const;
-
 const INTERNAL_FACE_COLOR = 0x111827;
 const FACE_NORMALS: Readonly<
   Record<CubeFaceDirection, readonly [number, number, number]>
@@ -95,6 +88,7 @@ export function CubeView({
   positionMarkers,
   focusedStickers,
 }: CubeViewProps) {
+  const { colorMap } = useCubeColorScheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const lastPlayedAnimationId = useRef<number | null>(null);
   const [cameraRig] = useState(() => new CubeCameraRig());
@@ -173,7 +167,7 @@ export function CubeView({
               ? INTERNAL_FACE_COLOR
               : shouldMuteSticker
                 ? 0x64748b
-                : STICKER_COLORS[sticker],
+                : STICKER_COLORS[colorMap[sticker]],
           roughness: 0.72,
           metalness: 0,
           emissive: shouldMuteSticker
@@ -333,6 +327,7 @@ export function CubeView({
     };
   }, [
     state,
+    colorMap,
     cameraRig,
     animation,
     preview,
